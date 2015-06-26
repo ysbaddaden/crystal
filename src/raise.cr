@@ -133,16 +133,12 @@ fun __crystal_get_exception(unwind_ex : LibABI::UnwindException*) : UInt64
 end
 
 def raise(ex : Exception)
-  unwind_ex = Pointer(LibABI::UnwindException).malloc
-  unwind_ex.value.exception_class = LibC::SizeT.zero
-  unwind_ex.value.exception_cleanup = LibC::SizeT.zero
-  unwind_ex.value.exception_object = ex.object_id
-  unwind_ex.value.exception_type_id = ex.crystal_type_id
-  __crystal_raise(unwind_ex)
+  raise ex.to_s
 end
 
 def raise(message : String)
-  raise Exception.new(message)
+  LibC.printf("Raise: '%s'\n", message.cstr)
+  LibC.exit(1)
 end
 
 fun __crystal_raise_string(message : UInt8*)
