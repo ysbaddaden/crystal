@@ -315,6 +315,8 @@ USAGE
         compiler.prelude = prelude
       end
 
+      compiler.release = true
+
       unless no_build
         opts.on("--release", "Compile in release mode") do
           compiler.release = true
