@@ -43,9 +43,12 @@ abstract class LLVM::ABI
     end
   end
 
-  def align_offset(offset, type)
-    align = align(type)
+  def align_up_to(offset, align)
     (offset + align - 1) / align * align
+  end
+
+  def align_offset(offset, type)
+    align_up_to(offset, align(type))
   end
 
   def align(type : Type, pointer_size)
@@ -83,7 +86,7 @@ abstract class LLVM::ABI
     getter kind : ArgKind
     getter type : Type
     getter cast : Type?
-    getter pad : Nil
+    getter pad : Type?
     getter attr : Attribute?
 
     def self.direct(type, cast = nil, pad = nil, attr = nil)
