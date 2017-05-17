@@ -7,6 +7,8 @@ end
 
 {% if flag?(:linux) %}
   require "./linux/random"
+{% elsif flag?(:openbsd) %}
+  require "./unix/arc4random"
 {% else %}
   require "./unix/random"
 {% end %}
