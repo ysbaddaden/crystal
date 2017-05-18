@@ -371,11 +371,19 @@ class Socket < IO::FileDescriptor
   end
 
   def reuse_port?
-    getsockopt_bool LibC::SO_REUSEPORT
+    {% if flag?(:cygnus) %}
+      raise "SO_REUSEPORT is unsupported on this platform"
+    {% else %}
+      getsockopt_bool LibC::SO_REUSEPORT
+    {% end %}
   end
 
   def reuse_port=(val : Bool)
-    setsockopt_bool LibC::SO_REUSEPORT, val
+    {% if flag?(:cygnus) %}
+      raise "SO_REUSEPORT is unsupported on this platform"
+    {% else %}
+      setsockopt_bool LibC::SO_REUSEPORT, val
+    {% end %}
   end
 
   def broadcast?
