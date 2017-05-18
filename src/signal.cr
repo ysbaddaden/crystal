@@ -126,4 +126,4 @@ fun __crystal_sigfault_handler(sig : LibC::Int, addr : Void*)
   LibC._exit sig
 end
 
-LibExt.setup_sigfault_handler
+#LibExt.setup_sigfault_handler

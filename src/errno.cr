@@ -11,7 +11,7 @@ lib LibC
     {% end %}
   {% elsif flag?(:darwin) || flag?(:freebsd) %}
     fun __error : Int*
-  {% elsif flag?(:openbsd) %}
+  {% elsif flag?(:cygnus) || flag?(:openbsd) %}
     fun __error = __errno : Int*
   {% end %}
 end
@@ -225,7 +225,7 @@ class Errno < Exception
       {% else %}
         LibC.errno
       {% end %}
-    {% elsif flag?(:darwin) || flag?(:freebsd) || flag?(:openbsd) %}
+    {% elsif flag?(:cygnus) || flag?(:darwin) || flag?(:freebsd) || flag?(:openbsd) %}
       LibC.__error.value
     {% end %}
   end
@@ -238,7 +238,7 @@ class Errno < Exception
       {% else %}
         LibC.errno = value
       {% end %}
-    {% elsif flag?(:darwin) || flag?(:freebsd) || flag?(:openbsd) %}
+    {% elsif flag?(:cygnus) || flag?(:darwin) || flag?(:freebsd) || flag?(:openbsd) %}
       LibC.__error.value = value
     {% end %}
   end
