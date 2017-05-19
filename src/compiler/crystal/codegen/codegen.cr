@@ -1994,20 +1994,21 @@ module Crystal
   end
 
   def self.safe_mangling(program, name)
-    if program.has_flag?("windows")
-      name.gsub do |char|
-        case char
-        when '<', '>', '(', ')', '*', ':', ',', '#', '@', ' '
-          "."
-        when '+'
-          ".."
-        else
-          char
-        end
-      end
-    else
+    # FIXME: generates conflicting method names!
+    #if program.has_flag?("windows")
+    #  name.gsub do |char|
+    #    case char
+    #    when '<', '>', '(', ')', '*', ':', ',', '#', '@', ' '
+    #      "."
+    #    when '+'
+    #      ".."
+    #    else
+    #      char
+    #    end
+    #  end
+    #else
       name
-    end
+    #end
   end
 
   class Program
