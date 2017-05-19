@@ -6,14 +6,14 @@ require "c/unistd"
 
 class File < IO::FileDescriptor
   # The file/directory separator character. `'/'` in Unix, `'\\'` in Windows.
-  SEPARATOR = {% if flag?(:windows) %}
+  SEPARATOR = {% if flag?(:windows) && !flag?(:cygnus) %}
     '\\'
   {% else %}
     '/'
   {% end %}
 
   # The file/directory separator string. `"/"` in Unix, `"\\"` in Windows.
-  SEPARATOR_STRING = {% if flag?(:windows) %}
+  SEPARATOR_STRING = {% if flag?(:windows) && !flag?(:cygnus) %}
     "\\"
   {% else %}
     "/"
@@ -373,7 +373,7 @@ class File < IO::FileDescriptor
     end
 
     String.build do |str|
-      {% if !flag?(:windows) %}
+      {% if !flag?(:windows) || flag?(:cygnus) %}
         str << SEPARATOR_STRING
       {% end %}
       items.join SEPARATOR_STRING, str

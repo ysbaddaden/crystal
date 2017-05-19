@@ -3,7 +3,7 @@
 # - http://stackoverflow.com/questions/1023306/finding-current-executables-path-without-proc-self-exe
 
 class Process
-  PATH_DELIMITER = {% if flag?(:windows) %} ';' {% else %} ':' {% end %}
+  PATH_DELIMITER = {% if flag?(:windows) && !flag?(:cygnus) %} ';' {% else %} ':' {% end %}
 
   # :nodoc:
   INITIAL_PATH = ENV["PATH"]?
