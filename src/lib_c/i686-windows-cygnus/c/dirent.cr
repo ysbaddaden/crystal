@@ -3,6 +3,10 @@ require "./sys/types"
 lib LibC
   type DIR = Void
 
+  # FIXME: generated alignment is wrong and introduces
+  #        an int32 padding between int32 and int64,
+  #        the struct is thus packed to skip the alignment
+  @[Packed]
   struct Dirent
     __d_version : UInt32T
     d_ino : InoT
