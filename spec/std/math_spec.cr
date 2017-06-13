@@ -24,6 +24,12 @@ describe "Math" do
   describe "Order-related functions" do
     Math.min(2.1, 2.11).should eq(2.1)
     Math.max(3.2, 3.11).should eq(3.2)
+
+    Math.min(2.1_f32, 2.11_f32).should eq(2.1_f32)
+    Math.max(3.2_f32, 3.11_f32).should eq(3.2_f32)
+
+    Math.min(210, 211).should eq(210)
+    Math.max(320, 311).should eq(320)
   end
 
   pending "Functions for computing quotient and remainder" do
