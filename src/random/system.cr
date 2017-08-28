@@ -18,6 +18,10 @@ module Random::System
     Crystal::System::Random.next_u
   end
 
+  def random_bytes(buf : Bytes)
+    Crystal::System::Random.random_bytes(buf)
+  end
+
   {% for type in [UInt8, UInt16, UInt32, UInt64] %}
     # Generates a random integer of a given type. The number of bytes to
     # generate can be limited; by default it will generate as many bytes as
@@ -34,13 +38,13 @@ module Random::System
 
       if needed_bytes < sizeof({{type}})
         bytes = Slice.new(buf.to_unsafe, needed_bytes)
-        Crystal::System::Random.random_bytes(bytes)
+        random_bytes(bytes)
 
         bytes.reduce({{type}}.new(0)) do |result, byte|
           (result << 8) | byte
         end
       else
-        Crystal::System::Random.random_bytes(buf.to_slice)
+        random_bytes(buf.to_slice)
         buf.to_unsafe.as({{type}}*).value
       end
     end
