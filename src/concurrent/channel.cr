@@ -30,9 +30,9 @@ abstract class Channel(T)
 
   def close
     @closed = true
-    Scheduler.enqueue @senders
+    Crystal.scheduler.enqueue @senders
     @senders.clear
-    Scheduler.enqueue @receivers
+    Crystal.scheduler.enqueue @receivers
     @receivers.clear
     nil
   end
@@ -112,7 +112,7 @@ abstract class Channel(T)
       end
 
       ops.each &.wait
-      Scheduler.reschedule
+      Crystal.scheduler.reschedule
       ops.each &.unwait
     end
   end
@@ -182,13 +182,13 @@ class Channel::Buffered(T) < Channel(T)
     while full?
       raise_if_closed
       @senders << Fiber.current
-      Scheduler.reschedule
+      Crystal.scheduler.reschedule
     end
 
     raise_if_closed
 
     @queue << value
-    Scheduler.enqueue @receivers
+    Crystal.scheduler.enqueue @receivers
     @receivers.clear
 
     self
@@ -198,11 +198,11 @@ class Channel::Buffered(T) < Channel(T)
     while empty?
       yield if @closed
       @receivers << Fiber.current
-      Scheduler.reschedule
+      Crystal.scheduler.reschedule
     end
 
     @queue.shift.tap do
-      Scheduler.enqueue @senders
+      Crystal.scheduler.enqueue @senders
       @senders.clear
     end
   end
@@ -229,7 +229,7 @@ class Channel::Unbuffered(T) < Channel(T)
     while @has_value
       raise_if_closed
       @senders << Fiber.current
-      Scheduler.reschedule
+      Crystal.scheduler.reschedule
     end
 
     raise_if_closed
@@ -241,7 +241,7 @@ class Channel::Unbuffered(T) < Channel(T)
     if receiver = @receivers.shift?
       receiver.resume
     else
-      Scheduler.reschedule
+      Crystal.scheduler.reschedule
     end
   end
 
@@ -252,7 +252,7 @@ class Channel::Unbuffered(T) < Channel(T)
       if sender = @senders.shift?
         sender.resume
       else
-        Scheduler.reschedule
+        Crystal.scheduler.reschedule
       end
     end
 
@@ -260,7 +260,7 @@ class Channel::Unbuffered(T) < Channel(T)
 
     @value.tap do
       @has_value = false
-      Scheduler.enqueue @sender.not_nil!
+      Crystal.scheduler.enqueue @sender.not_nil!
       @sender = nil
     end
   end
@@ -276,7 +276,7 @@ class Channel::Unbuffered(T) < Channel(T)
   def close
     super
     if sender = @sender
-      Scheduler.enqueue sender
+      Crystal.scheduler.enqueue sender
       @sender = nil
     end
   end

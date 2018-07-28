@@ -8,7 +8,7 @@ class Mutex
     @lock_count = 0
   end
 
-  def lock
+  def lock : Nil
     mutex_fiber = @mutex_fiber
     current_fiber = Fiber.current
 
@@ -19,13 +19,11 @@ class Mutex
     else
       queue = @queue ||= Deque(Fiber).new
       queue << current_fiber
-      Scheduler.reschedule
+      Crystal.scheduler.reschedule
     end
-
-    nil
   end
 
-  def unlock
+  def unlock : Nil
     unless @mutex_fiber == Fiber.current
       raise "Attempt to unlock a mutex which is not locked"
     end
@@ -37,12 +35,10 @@ class Mutex
 
     if fiber = @queue.try &.shift?
       @mutex_fiber = fiber
-      Scheduler.enqueue fiber
+      Crystal.scheduler.enqueue fiber
     else
       @mutex_fiber = nil
     end
-
-    nil
   end
 
   def synchronize

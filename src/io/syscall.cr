@@ -103,54 +103,50 @@ module IO::Syscall
     end
   end
 
-  private def wait_readable(timeout = @read_timeout)
+  private def wait_readable(timeout = @read_timeout) : Nil
     wait_readable(timeout: timeout) { |err| raise err }
   end
 
-  private def wait_readable(timeout = @read_timeout)
+  private def wait_readable(timeout = @read_timeout) : Nil
     readers = (@readers ||= Deque(Fiber).new)
     readers << Fiber.current
     add_read_event(timeout)
-    Scheduler.reschedule
+    Crystal.scheduler.reschedule
 
     if @read_timed_out
       @read_timed_out = false
       yield Timeout.new("Read timed out")
     end
-
-    nil
   end
 
-  private abstract def add_read_event(timeout = @read_timeout)
+  private abstract def add_read_event(timeout = @read_timeout) : Nil
 
-  private def wait_writable(timeout = @write_timeout)
+  private def wait_writable(timeout = @write_timeout) : Nil
     wait_writable(timeout: timeout) { |err| raise err }
   end
 
-  private def wait_writable(timeout = @write_timeout)
+  private def wait_writable(timeout = @write_timeout) : Nil
     writers = (@writers ||= Deque(Fiber).new)
     writers << Fiber.current
     add_write_event(timeout)
-    Scheduler.reschedule
+    Crystal.scheduler.reschedule
 
     if @write_timed_out
       @write_timed_out = false
       yield Timeout.new("Write timed out")
     end
-
-    nil
   end
 
-  private abstract def add_write_event(timeout = @write_timeout)
+  private abstract def add_write_event(timeout = @write_timeout) : Nil
 
   private def reschedule_waiting
     if readers = @readers
-      Scheduler.enqueue readers
+      Crystal.scheduler.enqueue readers
       readers.clear
     end
 
     if writers = @writers
-      Scheduler.enqueue writers
+      Crystal.scheduler.enqueue writers
       writers.clear
     end
   end

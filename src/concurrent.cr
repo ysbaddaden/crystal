@@ -1,5 +1,7 @@
 require "fiber"
 require "./concurrent/*"
+require "./crystal/event_loop"
+require "./crystal/scheduler"
 
 # Blocks the current fiber for the specified number of seconds.
 #
@@ -25,7 +27,7 @@ end
 #
 # Meanwhile, other ready-to-execute fibers might start their execution.
 def sleep
-  Scheduler.reschedule
+  Crystal.scheduler.reschedule
 end
 
 # Spawns a new fiber.
@@ -58,7 +60,7 @@ end
 # ```
 def spawn(*, name : String? = nil, &block)
   fiber = Fiber.new(name, &block)
-  Scheduler.enqueue fiber
+  Crystal.scheduler.enqueue fiber
   fiber
 end
 

@@ -460,7 +460,7 @@ class Process
   # Hooks are defined here due to load order problems.
   def self.after_fork_child_callbacks
     @@after_fork_child_callbacks ||= [
-      ->Scheduler.after_fork,
+      -> { Crystal.event_loop.after_fork },
       ->Crystal::Signal.after_fork,
       ->Crystal::SignalChildHandler.after_fork,
       ->Random::DEFAULT.new_seed,
@@ -469,6 +469,9 @@ class Process
 end
 
 {% unless flag?(:win32) %}
+  # Initialize event loop.
+  Crystal.event_loop
+
   # Background loop to cleanup unused fiber stacks.
   spawn do
     loop do

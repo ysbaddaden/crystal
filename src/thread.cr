@@ -95,4 +95,14 @@ class Thread
       @@threads.delete(self)
     end
   end
+
+  # :nodoc:
+  def current_scheduler
+    @current_scheduler ||= Crystal::Scheduler.new
+  end
+
+  # :nodoc:
+  def current_scheduler?
+    @current_scheduler
+  end
 end
