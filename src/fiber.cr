@@ -16,7 +16,7 @@ class Fiber
   @@stack_pool = [] of Void*
 
   @stack : Void*
-  @resume_event : Event::Event?
+  @resume_event : Crystal::Event?
   @stack_top = Pointer(Void).null
   protected property stack_top : Void*
   protected property stack_bottom : Void*
