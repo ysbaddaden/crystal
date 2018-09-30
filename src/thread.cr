@@ -6,6 +6,10 @@ class Thread
   # Don't use this class, it is used internally by the event scheduler.
   # Use spawn and channels instead.
 
+  # all threads, so the GC can see them (GC doesn't scan thread locals)
+  @@threads = Set(Thread).new
+  @@threads_mutex = Thread::Mutex.new
+
   @th : LibC::PthreadT?
   @exception : Exception?
   @detached = false
@@ -14,7 +18,7 @@ class Thread
 
   def initialize(&@func : ->)
     @current_fiber = uninitialized Fiber
-    @@threads << self
+    @@threads_mutex.synchronize { @@threads << self }
     @th = th = uninitialized LibC::PthreadT
 
     ret = GC.pthread_create(pointerof(th), Pointer(LibC::PthreadAttrT).null, ->(data : Void*) {
@@ -31,7 +35,7 @@ class Thread
   def initialize
     @current_fiber = uninitialized Fiber
     @func = ->{}
-    @@threads << self
+    @@threads_mutex.synchronize { @@threads << self }
     @th = LibC.pthread_self
   end
 
@@ -48,51 +52,49 @@ class Thread
     end
   end
 
-  # All threads, so the GC can see them (GC doesn't scan thread locals)
-  # and we can find the current thread on platforms that don't support
-  # thread local storage (eg: OpenBSD)
-  @@threads = Set(Thread).new
+  {% if flag?(:android) || flag?(:openbsd) %}
+    # no thread local storage (TLS) for OpenBSD or Android,
+    # we use pthread's specific storage (TSS) instead:
+    @@current_key = uninitialized LibC::PthreadKeyT
 
-  {% if flag?(:openbsd) %}
-    @@main = new
+    ret = LibC.pthread_key_create(pointerof(@@current_key), nil)
+    raise Errno.new("pthread_key_create") unless ret == 0
 
     def self.current : Thread
-      if LibC.pthread_main_np == 1
-        return @@main
+      if ptr = LibC.pthread_getspecific(@@current_key)
+        ptr.as(Thread)
+      else
+        raise "BUG: Thread.current returned NULL"
       end
-
-      current_thread_id = LibC.pthread_self
-
-      current_thread = @@threads.find do |thread|
-        LibC.pthread_equal(thread.id, current_thread_id) != 0
-      end
-
-      raise "Error: failed to find current thread" unless current_thread
-      current_thread
     end
 
-    protected def id
-      @th.not_nil!
+    protected def self.current=(thread : Thread) : Thread
+      ret = LibC.pthread_setspecific(@@current_key, thread.as(Void*))
+      raise Errno.new("pthread_setspecific") unless ret == 0
+      thread
     end
+
+    self.current = new
   {% else %}
     @[ThreadLocal]
     @@current = new
 
-    def self.current
+    def self.current : Thread
       @@current
+    end
+
+    protected def self.current=(@@current : Thread) : Thread
     end
   {% end %}
 
   protected def start
-    {% unless flag?(:openbsd) %}
-    @@current = self
-    {% end %}
+    Thread.current = self
     begin
       @func.call
     rescue ex
       @exception = ex
     ensure
-      @@threads.delete(self)
+      @@threads_mutex.synchronize { @@threads.delete(self) }
     end
   end
 end
