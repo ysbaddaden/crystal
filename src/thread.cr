@@ -14,10 +14,7 @@ class Thread
   @exception : Exception?
   @detached = false
 
-  property current_fiber
-
   def initialize(&@func : ->)
-    @current_fiber = uninitialized Fiber
     @@threads_mutex.synchronize { @@threads << self }
     @th = th = uninitialized LibC::PthreadT
 
@@ -33,7 +30,6 @@ class Thread
   end
 
   def initialize
-    @current_fiber = uninitialized Fiber
     @func = ->{}
     @@threads_mutex.synchronize { @@threads << self }
     @th = LibC.pthread_self
