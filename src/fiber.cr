@@ -11,8 +11,47 @@ end
 class Fiber
   STACK_SIZE = 8 * 1024 * 1024
 
-  @@first_fiber : Fiber? = nil
-  @@last_fiber : Fiber? = nil
+  # :nodoc:
+  struct LinkedList
+    @head : Fiber?
+    @tail : Fiber?
+
+    def each : Nil
+      fiber = @head
+
+      while fiber
+        yield fiber
+        fiber = fiber.next_fiber
+      end
+    end
+
+    def push(fiber : Fiber) : Nil
+      fiber.prev_fiber = nil
+
+      if last_fiber = @tail
+        fiber.prev_fiber = last_fiber
+        last_fiber.next_fiber = @tail = fiber
+      else
+        @head = @tail = fiber
+      end
+    end
+
+    def delete(fiber : Fiber) : Nil
+      if prev_fiber = fiber.prev_fiber
+        prev_fiber.next_fiber = fiber.next_fiber
+      else
+        @head = fiber.next_fiber
+      end
+
+      if next_fiber = fiber.next_fiber
+        next_fiber.prev_fiber = fiber.prev_fiber
+      else
+        @tail = fiber.prev_fiber
+      end
+    end
+  end
+
+  @@fibers = LinkedList.new
   @@stack_pool = [] of Void*
 
   @stack : Void*
@@ -32,13 +71,7 @@ class Fiber
     stack_ptr = @stack_bottom - sizeof(Void*)
     makecontext(stack_ptr, fiber_main)
 
-    @prev_fiber = nil
-    if last_fiber = @@last_fiber
-      @prev_fiber = last_fiber
-      last_fiber.next_fiber = @@last_fiber = self
-    else
-      @@first_fiber = @@last_fiber = self
-    end
+    @@fibers.push(self)
   end
 
   # :nodoc:
@@ -49,7 +82,7 @@ class Fiber
     @stack_bottom = GC.stack_bottom
     @name = "main"
 
-    @@first_fiber = @@last_fiber = self
+    @@fibers.push(self)
   end
 
   protected def self.allocate_stack
@@ -98,17 +131,7 @@ class Fiber
     @@stack_pool << @stack
 
     # Remove the current fiber from the linked list
-    if prev_fiber = @prev_fiber
-      prev_fiber.next_fiber = @next_fiber
-    else
-      @@first_fiber = @next_fiber
-    end
-
-    if next_fiber = @next_fiber
-      next_fiber.prev_fiber = @prev_fiber
-    else
-      @@last_fiber = @prev_fiber
-    end
+    @@fibers.delete(self)
 
     # Delete the resume event if it was used by `yield` or `sleep`
     @resume_event.try &.free
@@ -153,10 +176,8 @@ class Fiber
 
   # This will push all fibers stacks whenever the GC wants to collect some memory
   GC.before_collect do
-    fiber = @@first_fiber
-    while fiber
+    @@fibers.each do |fiber|
       fiber.push_gc_roots unless fiber == Fiber.current
-      fiber = fiber.next_fiber
     end
   end
 end
