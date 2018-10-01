@@ -55,10 +55,13 @@ class Thread
   {% if flag?(:android) || flag?(:openbsd) %}
     # no thread local storage (TLS) for OpenBSD or Android,
     # we use pthread's specific storage (TSS) instead:
-    @@current_key = uninitialized LibC::PthreadKeyT
+    @@current_key : LibC::PthreadKeyT
 
-    ret = LibC.pthread_key_create(pointerof(@@current_key), nil)
-    raise Errno.new("pthread_key_create") unless ret == 0
+    @@current_key = begin
+      ret = LibC.pthread_key_create(out current_key, nil)
+      raise Errno.new("pthread_key_create") unless ret == 0
+      current_key
+    end
 
     def self.current : Thread
       if ptr = LibC.pthread_getspecific(@@current_key)
