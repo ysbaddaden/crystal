@@ -1,4 +1,36 @@
 require "c/sys/mman"
+
+# Load the arch-specific methods to create a context and to swap from one
+# context to another one. There are two methods: `Fiber#makecontext` and
+# `Fiber.swapcontext`.
+#
+# - `Fiber.swapcontext(current_stack_ptr : Void**, dest_stack_ptr : Void*)
+#
+#   A fiber context switch in Crystal is achieved by calling a symbol (which
+#   must never be inlined) that will push the callee-saved registers (sometimes
+#   FPU registers and others) on the stack, saving the current stack pointer at
+#   location pointed by `current_stack_ptr` (the current fiber is now paused)
+#   then loading the `dest_stack_ptr` pointer into the stack pointer register
+#   and popping previously saved registers from the stack. Upon return from the
+#   symbol the new fiber is resumed since we returned/jumped to the calling
+#   symbol.
+#
+#   Details are arch-specific. For example:
+#   - which registers must be saved, the callee-saved are sometimes enough (X86)
+#     but some archs need to save the FPU register too (ARMHF);
+#   - a simple return may be enough (X86), but sometimes an explicit jump is
+#     required to not confuse the stack unwinder (ARM);
+#   - and more.
+#
+#   For the initial resume, the register holding the first parameter must be set
+#   (see makecontext below) and thus must also be saved/restored.
+#
+# - `Fiber#makecontext(stack_ptr : Void*, fiber_main : Fiber ->))`
+#
+#   `makecontext` is responsible to reserve and initialize space on the stack
+#   for the initial context and save the initial `@stack_top` pointer. The first
+#   time a fiber is resumed, the `fiber_main` proc must be called, passing
+#   `self` as its first argument.
 require "./fiber/*"
 
 # :nodoc:
@@ -68,7 +100,13 @@ class Fiber
     @stack_bottom = @stack + STACK_SIZE
 
     fiber_main = ->(f : Fiber) { f.run }
+
+    # ???
     stack_ptr = @stack_bottom - sizeof(Void*)
+
+    # align the stack pointer to 16 bytes
+    stack_ptr = Pointer(Void*).new(stack_ptr.address & ~0x0f_u64)
+
     makecontext(stack_ptr, fiber_main)
 
     @@fibers.push(self)

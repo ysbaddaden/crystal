@@ -3,9 +3,6 @@
 class Fiber
   # :nodoc:
   def makecontext(stack_ptr, fiber_main)
-    # align the stack pointer to 16 bytes
-    stack_ptr = Pointer(Void*).new(stack_ptr.address & ~0x0f_u64)
-
     # in IA32, the context switch push/pops 4 registers.
     # add two more to store the argument of `fiber_main`:
     @stack_top = (stack_ptr - 6).as(Void*)

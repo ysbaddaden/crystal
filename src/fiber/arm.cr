@@ -3,9 +3,6 @@
 class Fiber
   # :nodoc:
   def makecontext(stack_ptr, fiber_main) : Void*
-    # align the stack pointer to 16 bytes
-    stack_ptr = Pointer(Void*).new(stack_ptr.address & ~0x0f_u64)
-
     # in ARMv6 / ARVMv7, the context switch push/pops 8 registers.
     # add one more to store the argument of `fiber_main`:
     {% if flag?(:armhf) %}
