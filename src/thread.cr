@@ -6,46 +6,48 @@ class Thread
   # Don't use this class, it is used internally by the event scheduler.
   # Use spawn and channels instead.
 
-  # all threads, so the GC can see them (GC doesn't scan thread locals)
-  @@threads = Set(Thread).new
-  @@threads_mutex = Thread::Mutex.new
+  # all thread objects, so the GC can see them (it doesn't scan thread locals)
+  @@threads = Thread::LinkedList(Thread).new
 
-  @th : LibC::PthreadT?
+  @th : LibC::PthreadT
   @exception : Exception?
   @detached = false
+  @main_fiber : Fiber?
 
+  # :nodoc:
+  property next : Thread?
+
+  # :nodoc:
+  property previous : Thread?
+
+  # Starts a new system thread.
   def initialize(&@func : ->)
-    @@threads_mutex.synchronize { @@threads << self }
-    @th = th = uninitialized LibC::PthreadT
+    @th = uninitialized LibC::PthreadT
 
-    ret = GC.pthread_create(pointerof(th), Pointer(LibC::PthreadAttrT).null, ->(data : Void*) {
+    ret = GC.pthread_create(pointerof(@th), Pointer(LibC::PthreadAttrT).null, ->(data : Void*) {
       (data.as(Thread)).start
       Pointer(Void).null
     }, self.as(Void*))
-    @th = th
 
-    if ret != 0
+    if ret == 0
+      @@threads.push(self)
+    else
       raise Errno.new("pthread_create")
     end
   end
 
+  # Used once to initialize the thread object representing the main thread of
+  # the process (that already exists).
   def initialize
     @func = ->{}
-    @@threads_mutex.synchronize { @@threads << self }
     @th = LibC.pthread_self
+    @main_fiber = Fiber.new
+
+    @@threads.push(self)
   end
 
   def finalize
-    GC.pthread_detach(@th.not_nil!) unless @detached
-  end
-
-  def join
-    GC.pthread_join(@th.not_nil!)
-    @detached = true
-
-    if exception = @exception
-      raise exception
-    end
+    GC.pthread_detach(@th) unless @detached
   end
 
   {% if flag?(:android) || flag?(:openbsd) %}
@@ -59,6 +61,7 @@ class Thread
       current_key
     end
 
+    # Returns the Thread object associated to the running system thread.
     def self.current : Thread
       if ptr = LibC.pthread_getspecific(@@current_key)
         ptr.as(Thread)
@@ -67,33 +70,61 @@ class Thread
       end
     end
 
+    # Associates the Thread object to the running system thread.
     protected def self.current=(thread : Thread) : Thread
       ret = LibC.pthread_setspecific(@@current_key, thread.as(Void*))
       raise Errno.new("pthread_setspecific") unless ret == 0
       thread
     end
-
-    self.current = new
   {% else %}
     @[ThreadLocal]
-    @@current = new
+    @@current : Thread?
 
+    # Returns the Thread object associated to the running system thread.
     def self.current : Thread
-      @@current
+      @@current || raise "BUG: Thread.current returned NULL"
     end
 
+    # Associates the Thread object to the running system thread.
     protected def self.current=(@@current : Thread) : Thread
     end
   {% end %}
 
+  # Create the thread object for the current thread (aka the main thread of the
+  # process).
+  #
+  # TODO: consider moving to `kernel.cr` or `crystal/main.cr`
+  self.current = new
+
+  def join
+    GC.pthread_join(@th)
+    @detached = true
+
+    if exception = @exception
+      raise exception
+    end
+  end
+
+  # Returns the Fiber representing the thread's main stack.
+  def main_fiber
+    @main_fiber.not_nil!
+  end
+
+  # :nodoc:
+  def scheduler
+    @scheduler ||= Crystal::Scheduler.new(main_fiber)
+  end
+
   protected def start
     Thread.current = self
+    @main_fiber = Fiber.new
+
     begin
       @func.call
     rescue ex
       @exception = ex
     ensure
-      @@threads_mutex.synchronize { @@threads.delete(self) }
+      @@threads.delete(self)
     end
   end
 end

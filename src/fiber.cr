@@ -1,4 +1,5 @@
 require "c/sys/mman"
+require "thread/linked_list"
 
 # Load the arch-specific methods to create a context and to swap from one
 # context to another one. There are two methods: `Fiber#makecontext` and
@@ -43,47 +44,7 @@ end
 class Fiber
   STACK_SIZE = 8 * 1024 * 1024
 
-  # :nodoc:
-  struct LinkedList
-    @head : Fiber?
-    @tail : Fiber?
-
-    def each : Nil
-      fiber = @head
-
-      while fiber
-        yield fiber
-        fiber = fiber.next_fiber
-      end
-    end
-
-    def push(fiber : Fiber) : Nil
-      fiber.prev_fiber = nil
-
-      if last_fiber = @tail
-        fiber.prev_fiber = last_fiber
-        last_fiber.next_fiber = @tail = fiber
-      else
-        @head = @tail = fiber
-      end
-    end
-
-    def delete(fiber : Fiber) : Nil
-      if prev_fiber = fiber.prev_fiber
-        prev_fiber.next_fiber = fiber.next_fiber
-      else
-        @head = fiber.next_fiber
-      end
-
-      if next_fiber = fiber.next_fiber
-        next_fiber.prev_fiber = fiber.prev_fiber
-      else
-        @tail = fiber.prev_fiber
-      end
-    end
-  end
-
-  @@fibers = LinkedList.new
+  @@fibers = Thread::LinkedList(Fiber).new
   @@stack_pool = [] of Void*
 
   @stack : Void*
@@ -91,9 +52,13 @@ class Fiber
   @stack_top = Pointer(Void).null
   protected property stack_top : Void*
   protected property stack_bottom : Void*
-  protected property next_fiber : Fiber?
-  protected property prev_fiber : Fiber?
   property name : String?
+
+  # :nodoc:
+  property next : Fiber?
+
+  # :nodoc:
+  property previous : Fiber?
 
   def initialize(@name : String? = nil, &@proc : ->)
     @stack = Fiber.allocate_stack
@@ -212,9 +177,9 @@ class Fiber
     GC.push_stack @stack_top, @stack_bottom
   end
 
-  # This will push all fibers stacks whenever the GC wants to collect some memory
+  # pushes the stack of pending fibers when the GC wants to collect memory:
   GC.before_collect do
-    @@fibers.each do |fiber|
+    @@fibers.unsafe_each do |fiber|
       fiber.push_gc_roots unless fiber == Fiber.current
     end
   end

@@ -1,12 +1,6 @@
 require "./event_loop"
+require "fiber"
 require "thread"
-
-class Thread
-  # :nodoc:
-  def scheduler
-    @scheduler ||= Crystal::Scheduler.new(Fiber.new)
-  end
-end
 
 # :nodoc:
 #
