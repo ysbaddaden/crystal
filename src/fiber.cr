@@ -60,6 +60,11 @@ class Fiber
   # :nodoc:
   property previous : Fiber?
 
+  # :nodoc:
+  def self.inactive(fiber : Fiber)
+    @@fibers.delete(fiber)
+  end
+
   def initialize(@name : String? = nil, &@proc : ->)
     @stack = Fiber.allocate_stack
     @stack_bottom = @stack + STACK_SIZE
@@ -179,8 +184,10 @@ class Fiber
 
   # pushes the stack of pending fibers when the GC wants to collect memory:
   GC.before_collect do
+    current = Fiber.current
+
     @@fibers.unsafe_each do |fiber|
-      fiber.push_gc_roots unless fiber == Fiber.current
+      fiber.push_gc_roots unless fiber == current
     end
   end
 end

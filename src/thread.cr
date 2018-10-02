@@ -117,13 +117,14 @@ class Thread
 
   protected def start
     Thread.current = self
-    @main_fiber = Fiber.new
+    @main_fiber = fiber = Fiber.new
 
     begin
       @func.call
     rescue ex
       @exception = ex
     ensure
+      Fiber.inactive(fiber)
       @@threads.delete(self)
     end
   end
