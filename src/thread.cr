@@ -7,7 +7,7 @@ class Thread
   # Use spawn and channels instead.
 
   # all thread objects, so the GC can see them (it doesn't scan thread locals)
-  @@threads = Thread::LinkedList(Thread).new
+  include Thread::LinkedList(Thread)
 
   @th : LibC::PthreadT
   @exception : Exception?
@@ -30,9 +30,9 @@ class Thread
     }, self.as(Void*))
 
     if ret == 0
-      @@threads.push(self)
+      Thread.push(self)
     else
-      raise Errno.new("pthread_create")
+      raise Errno.new("pthread_create", ret)
     end
   end
 
@@ -41,13 +41,16 @@ class Thread
   def initialize
     @func = ->{}
     @th = LibC.pthread_self
-    @main_fiber = Fiber.new
+    @main_fiber = Fiber.new(name: "main")
 
-    @@threads.push(self)
+    Thread.push(self)
   end
 
   def finalize
-    GC.pthread_detach(@th) unless @detached
+    unless @detached
+      ret = GC.pthread_detach(@th)
+      raise Errno.new("pthread_detach", ret) unless ret == 0
+    end
   end
 
   {% if flag?(:android) || flag?(:openbsd) %}
@@ -55,10 +58,12 @@ class Thread
     # we use pthread's specific storage (TSS) instead:
     @@current_key : LibC::PthreadKeyT
 
-    @@current_key = begin
-      ret = LibC.pthread_key_create(out current_key, nil)
-      raise Errno.new("pthread_key_create") unless ret == 0
-      current_key
+    def self.current_key
+      @@current_key ||= begin
+        ret = LibC.pthread_key_create(out current_key, nil)
+        raise Errno.new("pthread_key_create", ret) unless ret == 0
+        current_key
+      end
     end
 
     # Returns the Thread object associated to the running system thread.
@@ -70,10 +75,11 @@ class Thread
       end
     end
 
+    # :nodoc:
     # Associates the Thread object to the running system thread.
-    protected def self.current=(thread : Thread) : Thread
+    def self.current=(thread : Thread) : Thread
       ret = LibC.pthread_setspecific(@@current_key, thread.as(Void*))
-      raise Errno.new("pthread_setspecific") unless ret == 0
+      raise Errno.new("pthread_setspecific", ret) unless ret == 0
       thread
     end
   {% else %}
@@ -85,16 +91,11 @@ class Thread
       @@current || raise "BUG: Thread.current returned NULL"
     end
 
+    # :nodoc:
     # Associates the Thread object to the running system thread.
-    protected def self.current=(@@current : Thread) : Thread
+    def self.current=(@@current : Thread) : Thread
     end
   {% end %}
-
-  # Create the thread object for the current thread (aka the main thread of the
-  # process).
-  #
-  # TODO: consider moving to `kernel.cr` or `crystal/main.cr`
-  self.current = new
 
   def join
     GC.pthread_join(@th)
@@ -107,7 +108,7 @@ class Thread
 
   # Returns the Fiber representing the thread's main stack.
   def main_fiber
-    @main_fiber.not_nil!
+    @main_fiber || raise "BUG: thread's main fiber is NULL"
   end
 
   # :nodoc:
@@ -117,15 +118,29 @@ class Thread
 
   protected def start
     Thread.current = self
-    @main_fiber = fiber = Fiber.new
+    @main_fiber = fiber = Fiber.new(name: "thread")
 
     begin
       @func.call
     rescue ex
       @exception = ex
     ensure
-      Fiber.inactive(fiber)
-      @@threads.delete(self)
+      Fiber.delete(fiber)
+      Thread.delete(self)
+    end
+  end
+
+  # @[NoInline]
+  def self.log(action, fiber = nil)
+    thread = Thread.current
+    scheduler = thread.scheduler
+
+    if fiber
+      LibC.dprintf 2, "thread=%014p %12s scheduler=%014p fiber=%014p [%s]\n",
+        thread.@th, action, scheduler.object_id, fiber.object_id, fiber.name || ""
+    else
+      LibC.dprintf 2, "thread=%014p %12s scheduler=%014p\n",
+        thread.@th, action, scheduler.object_id
     end
   end
 end

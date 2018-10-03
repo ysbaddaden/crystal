@@ -36,6 +36,11 @@ struct Crystal::Event
   # :nodoc:
   struct Base
     def initialize
+      {% if flag?(:windows) %}
+        LibEvent2.evthread_use_windows_threads
+      {% else %}
+        LibEvent2.evthread_use_pthreads
+      {% end %}
       @base = LibEvent2.event_base_new
     end
 
@@ -56,6 +61,10 @@ struct Crystal::Event
 
     def run_once
       LibEvent2.event_base_loop(@base, LibEvent2::EventLoopFlags::Once)
+    end
+
+    def run_nonblock
+      LibEvent2.event_base_loop(@base, LibEvent2::EventLoopFlags::NonBlock)
     end
 
     def loop_break

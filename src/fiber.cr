@@ -5,7 +5,7 @@ require "thread/linked_list"
 # context to another one. There are two methods: `Fiber#makecontext` and
 # `Fiber.swapcontext`.
 #
-# - `Fiber.swapcontext(current_stack_ptr : Void**, dest_stack_ptr : Void*)
+# - `Fiber.swapcontext(current_context : Fiber::Context*, new_context : Fiber::Context*)
 #
 #   A fiber context switch in Crystal is achieved by calling a symbol (which
 #   must never be inlined) that will push the callee-saved registers (sometimes
@@ -29,9 +29,9 @@ require "thread/linked_list"
 # - `Fiber#makecontext(stack_ptr : Void*, fiber_main : Fiber ->))`
 #
 #   `makecontext` is responsible to reserve and initialize space on the stack
-#   for the initial context and save the initial `@stack_top` pointer. The first
-#   time a fiber is resumed, the `fiber_main` proc must be called, passing
-#   `self` as its first argument.
+#   for the initial context and to save the initial `@context.stack_top`
+#   pointer. The first time a fiber is resumed, the `fiber_main` proc must be
+#   called, passing `self` as its first argument.
 require "./fiber/*"
 
 # :nodoc:
@@ -42,27 +42,38 @@ fun _fiber_get_stack_top : Void*
 end
 
 class Fiber
+  # :nodoc:
+  #
+  # The arch-specific make/swapcontext assembly relies on the Fiber::Context
+  # struct and expects the following layout. Avoid moving the struct properties
+  # as it would require to update all the make/swapcontext implementations.
+  @[Extern]
+  struct Context
+    property resumable : LibC::Long
+    property stack_top : Void*
+
+    def initialize
+      @resumable = 0
+      @stack_top = Pointer(Void).null
+    end
+  end
+
   STACK_SIZE = 8 * 1024 * 1024
 
-  @@fibers = Thread::LinkedList(Fiber).new
-  @@stack_pool = [] of Void*
+  include Thread::LinkedList(Fiber)
 
   @stack : Void*
-  @resume_event : Crystal::Event?
-  @stack_top = Pointer(Void).null
-  protected property stack_top : Void*
+  @context = Context.new
   protected property stack_bottom : Void*
+  @resume_event : Crystal::Event?
   property name : String?
 
-  # :nodoc:
-  property next : Fiber?
+  def resumable? : Bool
+    @context.resumable == 1
+  end
 
-  # :nodoc:
-  property previous : Fiber?
-
-  # :nodoc:
-  def self.inactive(fiber : Fiber)
-    @@fibers.delete(fiber)
+  def running? : Bool
+    @context.resumable == 0
   end
 
   def initialize(@name : String? = nil, &@proc : ->)
@@ -79,22 +90,21 @@ class Fiber
 
     makecontext(stack_ptr, fiber_main)
 
-    @@fibers.push(self)
+    Fiber.push(self)
   end
 
   # :nodoc:
-  def initialize
+  def initialize(@name = "main")
     @proc = Proc(Void).new { }
     @stack = Pointer(Void).null
-    @stack_top = _fiber_get_stack_top
+    @context.stack_top = _fiber_get_stack_top
     @stack_bottom = GC.stack_bottom
-    @name = "main"
 
-    @@fibers.push(self)
+    Fiber.push(self)
   end
 
   protected def self.allocate_stack
-    if pointer = @@stack_pool.pop?
+    if pointer = stack_pool.pop?
       return pointer
     end
 
@@ -115,16 +125,6 @@ class Fiber
   end
 
   # :nodoc:
-  def self.stack_pool_collect
-    return if @@stack_pool.size == 0
-    free_count = @@stack_pool.size > 1 ? @@stack_pool.size / 2 : 1
-    free_count.times do
-      stack = @@stack_pool.pop
-      LibC.munmap(stack, Fiber::STACK_SIZE)
-    end
-  end
-
-  # :nodoc:
   def run
     @proc.call
   rescue ex
@@ -136,10 +136,10 @@ class Fiber
     ex.inspect_with_backtrace(STDERR)
     STDERR.flush
   ensure
-    @@stack_pool << @stack
+    Fiber.stack_pool << @stack
 
     # Remove the current fiber from the linked list
-    @@fibers.delete(self)
+    Fiber.delete(self)
 
     # Delete the resume event if it was used by `yield` or `sleep`
     @resume_event.try &.free
@@ -177,17 +177,25 @@ class Fiber
     to_s(io)
   end
 
+  # Push the used section of the stack
   protected def push_gc_roots
-    # Push the used section of the stack
-    GC.push_stack @stack_top, @stack_bottom
+    GC.push_stack @context.stack_top, @stack_bottom
+  end
+
+  # :nodoc:
+  #
+  # Registers the current fiber stack to the GC as the stack that the current
+  # thread is running.
+  def register_gc_stack : Nil
+    GC.stack_bottom = @stack_bottom
+    # thread = Thread.current
+    # GC.register_altstack(thread.stack_bottom, thread.stack_size,  @stack_bottom, STACK_SIZE)
   end
 
   # pushes the stack of pending fibers when the GC wants to collect memory:
   GC.before_collect do
-    current = Fiber.current
-
-    @@fibers.unsafe_each do |fiber|
-      fiber.push_gc_roots unless fiber == current
+    Fiber.unsafe_each do |fiber|
+      fiber.push_gc_roots unless fiber.running?
     end
   end
 end

@@ -474,14 +474,7 @@ class Process
 end
 
 {% unless flag?(:win32) %}
-  # Background loop to cleanup unused fiber stacks.
-  spawn do
-    loop do
-      sleep 5
-      Fiber.stack_pool_collect
-    end
-  end
-
+  # Setup default signal handlers of the process:
   Signal.setup_default_handlers
   LibExt.setup_sigfault_handler
 {% end %}
