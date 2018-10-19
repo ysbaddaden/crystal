@@ -2,27 +2,31 @@
 
 class Fiber
   # :nodoc:
-  def makecontext(stack_ptr, fiber_main) : Void*
-    # in ARMv8, the context switch push/pops 12 registers + 8 FPU registers.
-    # add one more to store the argument of `fiber_main` (+ alignment)
+  def makecontext(stack_ptr, fiber_main) : Nil
+    # in ARMv8, the context switch push/pop 12 registers and 8 FPU registers,
+    # and one more to store the argument of `fiber_main` (+ alignment), we thus
+    # reserve space for 22 pointers:
     @stack_top = (stack_ptr - 22).as(Void*)
 
-    stack_ptr[-2] = self.as(Void*)      # this will be `pop` into r0 (first argument)
-    stack_ptr[-14] = fiber_main.pointer # initial `resume` will `ret` to this address
+    stack_ptr[-2] = self.as(Void*)      # x0 (r0): puts `self` as first argument for `fiber_main`
+    stack_ptr[-14] = fiber_main.pointer # x30 (lr): initial `resume` will `ret` to this address
   end
 
   # :nodoc:
   @[NoInline]
   @[Naked]
-  def self.swapcontext(current, to) : Nil
+  def self.swapcontext(current_context, new_context) : Nil
     # adapted from https://github.com/ldc-developers/druntime/blob/ldc/src/core/threadasm.S
     #
-    # preserve/restore AAPCS64 registers
+    # preserve/restore AAPCS64 registers:
     # x19-x28   5.1.1 64-bit callee saved
     # x29       fp, or possibly callee saved reg - depends on platform choice 5.2.3)
     # x30       lr
     # x0        self argument (initial call)
     # d8-d15    5.1.2 says callee only must save bottom 64-bits (the "d" regs)
+    #
+    # eventually reset LR to zero to avoid the ARM unwinder to mistake the
+    # context switch as a regular call.
     asm("
       stp     d15, d14, [sp, #-22*8]!
       stp     d13, d12, [sp, #2*8]
@@ -34,13 +38,16 @@ class Fiber
       stp     x24, x23, [sp, #14*8]
       stp     x22, x21, [sp, #16*8]
       stp     x20, x19, [sp, #18*8]
-      stp     x0,  x1,  [sp, #20*8] // self, alignment
+      stp     x0,  x1,  [sp, #20*8] // push 1st argument (+ alignment)
 
-      mov     x19, sp
-      str     x19, [$0]
-      mov     sp, $1
+      mov     x19, sp               // x19 = sp
+      str     x19, [$0, #0]         // current_context.stack_top = x19 (sp)
+      str     #1, [$0, #8]          // current_context.resumable = 1
 
-      ldp     x0,  x1,  [sp, #20*8] // self, alignment
+      str     #0, [$0, #8]          // new_context.resumable = 0
+      mov     sp, [$1, #0]          // sp = new_context.stack_top
+
+      ldp     x0,  x1,  [sp, #20*8] // pop 1st argument (+ alignement)
       ldp     x20, x19, [sp, #18*8]
       ldp     x22, x21, [sp, #16*8]
       ldp     x24, x23, [sp, #14*8]
@@ -56,7 +63,6 @@ class Fiber
       mov     x16, x30 // save lr
       mov     x30, #0  // reset lr
       br      x16      // jump to new pc value
-      "
-            :: "r"(current), "r"(to))
+      " :: "r"(current), "r"(to))
   end
 end
