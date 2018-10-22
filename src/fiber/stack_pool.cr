@@ -1,8 +1,10 @@
+require "crystal/system/mmap"
+
 class Fiber
   # :nodoc:
   class StackPool
     def initialize
-      @deque = Deque(Void*).new
+      @deque = Deque(Crystal::System::MemoryMapping).new
       @mutex = Thread::Mutex.new
     end
 
@@ -11,7 +13,7 @@ class Fiber
     def collect(count = lazy_size / 2)
       count.times do
         if stack = @deque.shift?
-          LibC.munmap(stack, Fiber::STACK_SIZE)
+          stack.free
         else
           return
         end
@@ -24,7 +26,7 @@ class Fiber
     end
 
     # Appends a stack to the bottom of the list.
-    def <<(stack)
+    def <<(stack : Crystal::System::MemoryMapping)
       @mutex.synchronize { @deque.push(stack) }
     end
 

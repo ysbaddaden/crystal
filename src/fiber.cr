@@ -4,6 +4,7 @@ require "c/sys/resource"
 {% end %}
 require "thread/linked_list"
 require "./fiber/context"
+require "./fiber/stack_pool"
 
 # :nodoc:
 @[NoInline]
@@ -22,10 +23,12 @@ class Fiber
   end
 
   STACK_SIZE = 8 * 1024 * 1024
+  GUARD_SIZE = 4 * 1024
 
   @@fibers = Thread::LinkedList(Fiber).new
 
   @context : Context
+  @mapping : Crystal::System::MemoryMapping?
   @stack : Void*
   @resume_event : Crystal::Event?
   protected property stack_bottom : Void*
@@ -44,8 +47,10 @@ class Fiber
 
   def initialize(@name : String? = nil, &@proc : ->)
     @context = Context.new
-    @stack = Fiber.allocate_stack
-    @stack_bottom = @stack + STACK_SIZE
+
+    @mapping = mapping = Fiber.allocate_stack
+    @stack = mapping.pointer
+    @stack_bottom = mapping.pointer + STACK_SIZE
 
     fiber_main = ->(f : Fiber) { f.run }
 
@@ -92,19 +97,9 @@ class Fiber
       return pointer
     end
 
-    flags = LibC::MAP_PRIVATE | LibC::MAP_ANON
-    {% if flag?(:openbsd) && !flag?(:"openbsd6.2") %}
-      flags |= LibC::MAP_STACK
-    {% end %}
-
-    LibC.mmap(nil, Fiber::STACK_SIZE, LibC::PROT_READ | LibC::PROT_WRITE, flags, -1, 0).tap do |pointer|
-      raise Errno.new("Cannot allocate new fiber stack") if pointer == LibC::MAP_FAILED
-
-      {% if flag?(:linux) %}
-        LibC.madvise(pointer, Fiber::STACK_SIZE, LibC::MADV_NOHUGEPAGE)
-      {% end %}
-
-      LibC.mprotect(pointer, 4096, LibC::PROT_NONE)
+    Crystal::System::MemoryMapping.new(STACK_SIZE, :READ_WRITE, :STACK).tap do |mapping|
+      mapping.advise(:NOHUGEPAGE)
+      mapping.protect(GUARD_SIZE, :NONE)
     end
   end
 
@@ -120,7 +115,9 @@ class Fiber
     ex.inspect_with_backtrace(STDERR)
     STDERR.flush
   ensure
-    stack_pool << @stack
+    if mapping = @mapping
+      Fiber.stack_pool << mapping
+    end
 
     # Remove the current fiber from the linked list
     @@fibers.delete(self)
