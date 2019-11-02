@@ -40,6 +40,18 @@ class IO::Hexdump < IO
     end
   end
 
+  def seek(offset, whence : Seek = Seek::Set)
+    @io.seek(offset, whence)
+  end
+
+  def pos
+    @io.pos
+  end
+
+  def pos=(value)
+    @io.pos = value
+  end
+
   def peek
     @io.peek
   end
