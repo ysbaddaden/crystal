@@ -93,7 +93,8 @@ class Channel(T)
     end
   end
 
-  private class SelectContext(S)
+  # :nodoc:
+  class SelectContext(S)
     @state : SelectContextSharedState
     property action : SelectAction(S)
     @activated = false
@@ -120,7 +121,8 @@ class Channel(T)
     end
   end
 
-  private enum DeliveryState
+  # :nodoc:
+  enum DeliveryState
     None
     Delivered
     Closed

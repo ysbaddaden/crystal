@@ -104,4 +104,45 @@ describe WaitGroup do
       end
     end
   {% end %}
+
+  describe "select" do
+    it "waits" do
+      wg = WaitGroup.new(1)
+      spawn { wg.done }
+
+      select
+      when wg.wait
+        # success
+      when timeout(1.seconds)
+        fail "reached timeout"
+      end
+    end
+
+    it "resumes immediately (no wait)" do
+      wg = WaitGroup.new(0)
+
+      select
+      when wg.wait
+        # success
+      when timeout(1.seconds)
+        fail "reached timeout"
+      end
+    end
+
+    it "reaches timeout" do
+      wg = WaitGroup.new(1)
+
+      spawn do
+        sleep 10.milliseconds
+        wg.done
+      end
+
+      select
+      when wg.wait
+        fail "expected timeout but got normal resume"
+      when timeout(2.milliseconds)
+        wg.wait
+      end
+    end
+  end
 end

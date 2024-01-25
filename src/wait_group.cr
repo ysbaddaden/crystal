@@ -30,15 +30,79 @@ require "crystal/pointer_linked_list"
 # # suspend the current fiber until the 5 fibers are done
 # wg.wait
 # ```
+#
+# WaitGroup can also appear in `select` expressions, so you can wait along with
+# operations on channels until a timeout is reached. For example:
+#
+# ```
+# select
+# when wg.wait
+#   puts "Done"
+# when timeout(5.seconds)
+#   puts "Error: timed out after 5 seconds"
+# end
+# ```
 class WaitGroup
   private struct Waiting
     include Crystal::PointerLinkedList::Node
+
+    setter fiber : Fiber
+    setter select_context : Channel::SelectContext(Nil)?
 
     def initialize(@fiber : Fiber)
     end
 
     def enqueue : Nil
+      if context = @select_context
+        return unless context.try_trigger
+      end
       @fiber.enqueue
+    end
+  end
+
+  # The actionable object for `select` expressions.
+  private class WaitAction
+    include Channel::SelectAction(Nil)
+
+    @waiting = uninitialized Waiting
+
+    def initialize(@wg : WaitGroup)
+    end
+
+    def execute : Channel::DeliveryState
+      if @wg.@counter.get == 0
+        Channel::DeliveryState::Delivered
+      else
+        Channel::DeliveryState::None
+      end
+    end
+
+    def wait(context : Channel::SelectContext(Nil)) : Nil
+      @waiting.fiber = Fiber.current
+      @waiting.select_context = context
+      @wg.@waiting.push(pointerof(@waiting))
+    end
+
+    def unwait_impl(context : Channel::SelectContext(Nil)) : Nil
+      @wg.@waiting.delete(pointerof(@waiting))
+    end
+
+    def wait_result_impl(context : Channel::SelectContext(Nil)) : Nil
+    end
+
+    def result : Nil
+    end
+
+    def lock_object_id : UInt64
+      object_id
+    end
+
+    def lock : Nil
+      @wg.@lock.lock
+    end
+
+    def unlock : Nil
+      @wg.@lock.unlock
     end
   end
 
@@ -96,5 +160,12 @@ class WaitGroup
     end
 
     Crystal::Scheduler.reschedule
+  end
+
+  # :nodoc:
+  #
+  # Hook for `select` expressions.
+  def wait_select_action
+    WaitAction.new(self)
   end
 end
