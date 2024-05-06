@@ -124,7 +124,7 @@ class Crystal::Iocp::EventLoop < Crystal::EventLoop
   def interrupt : Nil
     thread = nil
 
-    @lock.synchronize do
+    @lock.sync do
       @interrupted.set(true)
       thread = @blocked_thread.swap(nil, :acquire)
     end
