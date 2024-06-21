@@ -1,9 +1,9 @@
 class Fiber
   # :nodoc:
   #
-  # The arch-specific make/swapcontext assembly relies on the Context struct and
-  # expects the following layout. Avoid moving the struct properties as it would
-  # require to update all the make/swapcontext implementations.
+  # The arch-specific make/swap/loadcontext assembly relies on the Context
+  # struct and expects the following layout. Avoid moving the struct properties
+  # as it would require to update all the make/swap/loadcontext implementations.
   @[Extern]
   struct Context
     property stack_top : Void*
@@ -15,15 +15,16 @@ class Fiber
       # The `stack_top` property is actually a pointer to the real Fiber
       # running in the interpreter.
       #
-      # The `resumable` property is also delegated to the real fiber. Only the
+      # The `status` property is also delegated to the real fiber. Only the
       # getter is defined (so we know the real state of the fiber); we don't
       # declare a setter because only the interpreter can manipulate it (in the
       # `makecontext` and `swapcontext` primitives).
-      def resumable : LibC::Long
-        Crystal::Interpreter.fiber_resumable(pointerof(@stack_top))
+      def status : Fiber::Status
+        value = Crystal::Interpreter.fiber_status(pointerof(@stack_top))
+        Fiber::Status.new(value)
       end
     {% else %}
-      property resumable : LibC::Long = 0
+      property status : Fiber::Status = :suspended
     {% end %}
 
     def initialize(@stack_top = Pointer(Void).null)
@@ -53,6 +54,15 @@ class Fiber
   # the context.
   #
   # def self.swapcontext(current_context : Context*, new_context : Context*) : Nil
+  # end
+
+  # :nodoc:
+  #
+  # Works identically to `#swapcontext` except that it doesn't save the current
+  # context, but merely loads *new_context* over the current one. Assumes the
+  # current context is dead and will never be resumed again.
+  #
+  # def self.loadcontext(new_context : Context*) : Nil
   # end
 
   # :nodoc:

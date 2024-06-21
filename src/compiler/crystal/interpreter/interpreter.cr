@@ -1154,7 +1154,7 @@ class Crystal::Repl::Interpreter
         nil
       end
     end
-    spawned_fiber.@context.resumable = 1
+    spawned_fiber.@context.status = :suspended
     spawned_fiber.as(Void*)
   end
 
@@ -1168,9 +1168,18 @@ class Crystal::Repl::Interpreter
     new_fiber.resume
   end
 
-  private def fiber_resumable(context : Void*) : LibC::Long
+  private def loadcontext(new_context : Void*)
+    new_fiber = new_context.as(Fiber*).value
+
+    # delegates the context switch to the interpreter's scheduler, so we update
+    # the current fiber reference, set the GC stack bottom, and so on (aka
+    # there's more to switching context than `Fiber.swapcontext`):
+    new_fiber.resume
+  end
+
+  private def fiber_status(context : Void*) : LibC::Long
     fiber = context.as(Fiber*).value
-    fiber.@context.resumable
+    fiber.@context.status.value
   end
 
   private def pry(ip, instructions, stack_bottom, stack)

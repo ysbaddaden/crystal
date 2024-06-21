@@ -14,4 +14,9 @@ class Fiber
   @[Primitive(:interpreter_fiber_swapcontext)]
   def self.swapcontext(current_context, new_context) : Nil
   end
+
+  # :nodoc:
+  @[Primitive(:interpreter_fiber_loadcontext)]
+  def self.loadcontext(new_context) : Nil
+  end
 end

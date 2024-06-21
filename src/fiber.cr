@@ -43,6 +43,12 @@ end
 # notifications that IO is ready or a timeout reached. When a fiber can be woken,
 # the event loop enqueues it in the scheduler
 class Fiber
+  enum Status : LibC::Long
+    Suspended = 0
+    Running = 1
+    Dead = 2
+  end
+
   # :nodoc:
   protected class_getter(fibers) { Thread::LinkedList(Fiber).new }
 
@@ -57,7 +63,6 @@ class Fiber
   # The name of the fiber, used as internal reference.
   property name : String?
 
-  @alive = true
   {% if flag?(:preview_mt) %} @current_thread = Atomic(Thread?).new(nil) {% end %}
 
   # :nodoc:
@@ -166,10 +171,12 @@ class Fiber
     @timeout_event.try &.free
     @timeout_select_action = nil
 
-    @alive = false
+    @context.status = :dead
     {% unless flag?(:interpreted) %}
       Crystal::Scheduler.stack_pool.release(@stack)
     {% end %}
+
+    # FIXME: this must call loadcontext() not swapcontext()!
     Fiber.suspend
   end
 
@@ -178,22 +185,26 @@ class Fiber
     Thread.current.current_fiber
   end
 
+  def status : Status
+    @context.status
+  end
+
   # The fiber's proc is currently running or didn't fully save its context. The
   # fiber can't be resumed.
   def running? : Bool
-    @context.resumable == 0
+    status.running?
   end
 
   # The fiber's proc is currently not running and fully saved its context. The
   # fiber can be resumed safely.
   def resumable? : Bool
-    @context.resumable == 1
+    status.suspended?
   end
 
   # The fiber's proc has terminated, and the fiber is now considered dead. The
   # fiber is impossible to resume, ever.
   def dead? : Bool
-    !@alive
+    status.dead?
   end
 
   # Immediately resumes execution of this fiber.

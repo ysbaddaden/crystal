@@ -20,9 +20,9 @@ module Crystal
     def self.spawn(fiber : Fiber, fiber_main : Void*) : Void*
     end
 
-    # Returns the resumable value from the interpreter's fiber.
-    @[Primitive(:interpreter_fiber_resumable)]
-    def self.fiber_resumable(context) : LibC::Long
+    # Returns the status value from the interpreter's fiber.
+    @[Primitive(:interpreter_fiber_status)]
+    def self.fiber_status(context) : LibC::Long
     end
   end
 end

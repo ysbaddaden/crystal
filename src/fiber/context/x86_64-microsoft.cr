@@ -6,9 +6,13 @@ class Fiber
     # A great explanation on stack contexts for win32:
     # https://cfsamson.gitbook.io/green-threads-explained-in-200-lines-of-rust/supporting-windows
 
+    # Alternative links (can't access above link):
+    # https://en.wikipedia.org/wiki/Win32_Thread_Information_Block#Stack_information_stored_in_the_TIB
+    # https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170#callercallee-saved-registers
+
     # 8 registers + 2 qwords for NT_TIB + 1 parameter + 10 128bit XMM registers
     @context.stack_top = (stack_ptr - (11 + 10*2)).as(Void*)
-    @context.resumable = 1
+    @context.status = :suspended
 
     stack_ptr[0] = fiber_main.pointer # %rbx: Initial `resume` will `ret` to this address
     stack_ptr[-1] = self.as(Void*)    # %rcx: puts `self` as first argument for `fiber_main`
@@ -23,8 +27,8 @@ class Fiber
   @[NoInline]
   @[Naked]
   def self.swapcontext(current_context, new_context) : Nil
+    #                  %rcx           , %rdx
     {% if compare_versions(Crystal::LLVM_VERSION, "9.0.0") >= 0 %}
-      #                %rcx           , %rdx
       asm("
           pushq %rcx
           pushq %gs:0x10    // Thread Information Block: Stack Limit
@@ -49,8 +53,9 @@ class Fiber
           movups %xmm14, 0x80(%rsp)
           movups %xmm15, 0x90(%rsp)
           movq %rsp, 0(%rcx)  // current_context.stack_top = %rsp
-          movl $$1, 8(%rcx)   // current_context.resumable = 1
-          movl $$0, 8(%rdx)   // new_context.resumable = 0
+          movl $$0, 8(%rcx)   // current_context.status = :suspended
+
+          movl $$1, 8(%rdx)   // new_context.status = :running
           movq 0(%rdx), %rsp  // %rsp = new_context.stack_top
           movups 0x00(%rsp), %xmm6 // pop XMM registers
           movups 0x10(%rsp), %xmm7
@@ -102,8 +107,9 @@ class Fiber
           movups %xmm14, 0x80(%rsp)
           movups %xmm15, 0x90(%rsp)
           movq %rsp, 0($0)  // current_context.stack_top = %rsp
-          movl $$1, 8($0)   // current_context.resumable = 1
-          movl $$0, 8($1)   // new_context.resumable = 0
+          movl $$0, 8($0)   // current_context.status = :suspended
+
+          movl $$1, 8($1)   // new_context.status = :running
           movq 0($1), %rsp  // %rsp = new_context.stack_top
           movups 0x00(%rsp), %xmm6 // pop XMM registers
           movups 0x10(%rsp), %xmm7
@@ -128,6 +134,70 @@ class Fiber
           popq %gs:0x10
           popq %rcx
           " :: "r"(current_context), "r"(new_context))
+    {% end %}
+  end
+
+  # :nodoc:
+  @[NoInline]
+  @[Naked]
+  def self.loadcontext(new_context) : Nil
+    #                  %rcx
+    {% if compare_versions(Crystal::LLVM_VERSION, "9.0.0") >= 0 %}
+      asm("
+          movl $$1, 8(%rcx)   // new_context.status = :running
+          movq 0(%rcx), %rsp  // %rsp = new_context.stack_top
+          movups 0x00(%rsp), %xmm6 // pop XMM registers
+          movups 0x10(%rsp), %xmm7
+          movups 0x20(%rsp), %xmm8
+          movups 0x30(%rsp), %xmm9
+          movups 0x40(%rsp), %xmm10
+          movups 0x50(%rsp), %xmm11
+          movups 0x60(%rsp), %xmm12
+          movups 0x70(%rsp), %xmm13
+          movups 0x80(%rsp), %xmm14
+          movups 0x90(%rsp), %xmm15
+          addq $$160, %rsp
+          popq %r15         // pop callee-saved registers from the stack
+          popq %r14
+          popq %r13
+          popq %r12
+          popq %rsi
+          popq %rbp
+          popq %rbx
+          popq %rdi         // pop 1st argument (for initial resume)
+          popq %gs:0x08
+          popq %gs:0x10
+          popq %rcx
+          ")
+    {% else %}
+      # On LLVM < 9.0 using the previous code emits some additional
+      # instructions that breaks the context switching.
+      asm("
+          movl $$1, 8($0)   // new_context.status = :running
+          movq 0($0), %rsp  // %rsp = new_context.stack_top
+          movups 0x00(%rsp), %xmm6 // pop XMM registers
+          movups 0x10(%rsp), %xmm7
+          movups 0x20(%rsp), %xmm8
+          movups 0x30(%rsp), %xmm9
+          movups 0x40(%rsp), %xmm10
+          movups 0x50(%rsp), %xmm11
+          movups 0x60(%rsp), %xmm12
+          movups 0x70(%rsp), %xmm13
+          movups 0x80(%rsp), %xmm14
+          movups 0x90(%rsp), %xmm15
+          addq $$160, %rsp
+          popq %r15         // pop callee-saved registers from the stack
+          popq %r14
+          popq %r13
+          popq %r12
+          popq %rsi
+          popq %rbp
+          popq %rbx
+          popq %rdi         // pop 1st argument (for initial resume)
+          popq %gs:0x08
+          popq %gs:0x10
+          popq %rcx
+          " :: "r"(new_context))
     {% end %}
   end
 end

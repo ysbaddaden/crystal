@@ -1657,10 +1657,14 @@ require "./repl"
         pop_values: [current_context : Void*, new_context : Void*],
         code:       swapcontext(current_context, new_context),
       },
-      interpreter_fiber_resumable: {
+      interpreter_fiber_loadcontext: {
+        pop_values: [new_context : Void*],
+        code:       loadcontext(new_context),
+      },
+      interpreter_fiber_status: {
         pop_values: [context : Void*],
         push:       true,
-        code:       fiber_resumable(context),
+        code:       fiber_status(context),
       },
 
       {% if flag?(:bits64) %}
