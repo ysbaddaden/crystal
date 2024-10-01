@@ -6,7 +6,7 @@ require "../../../../src/crystal/system/unix/evented/poll_descriptor"
 class Crystal::Evented::FakeLoop < Crystal::Evented::EventLoop
   getter operations = [] of {Symbol, Int32, Crystal::Evented::Arena::Index | Bool}
 
-  private def system_run(blocking : Bool) : Nil
+  private def system_run(blocking : Bool, & : Fiber ->) : Nil
   end
 
   private def interrupt : Nil
