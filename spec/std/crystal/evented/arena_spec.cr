@@ -6,7 +6,7 @@ require "../../../../src/crystal/system/unix/evented/arena"
 describe Crystal::Evented::Arena do
   describe "#lazy_allocate" do
     it "yields block once" do
-      arena = Crystal::Evented::Arena(Int32).new(32)
+      arena = Crystal::Evented::Arena(Int32, 96).new(32)
       pointer = nil
       index = nil
       called = 0
@@ -34,7 +34,7 @@ describe Crystal::Evented::Arena do
     end
 
     it "allocates up to capacity" do
-      arena = Crystal::Evented::Arena(Int32).new(32)
+      arena = Crystal::Evented::Arena(Int32, 96).new(32)
 
       objects = 32.times.map do |i|
         arena.lazy_allocate(i) { |pointer| pointer.value = i }
@@ -46,7 +46,7 @@ describe Crystal::Evented::Arena do
     end
 
     it "checks bounds" do
-      arena = Crystal::Evented::Arena(Int32).new(32)
+      arena = Crystal::Evented::Arena(Int32, 96).new(32)
       expect_raises(IndexError) { arena.lazy_allocate(-1) { } }
       expect_raises(IndexError) { arena.lazy_allocate(33) { } }
     end
@@ -54,7 +54,7 @@ describe Crystal::Evented::Arena do
 
   describe "#get" do
     it "returns previously allocated object" do
-      arena = Crystal::Evented::Arena(Int32).new(32)
+      arena = Crystal::Evented::Arena(Int32, 96).new(32)
       pointer, index = arena.lazy_allocate(30) { |ptr| ptr.value = 654321 }
 
       2.times do
@@ -70,7 +70,7 @@ describe Crystal::Evented::Arena do
     end
 
     it "checks generation" do
-      arena = Crystal::Evented::Arena(Int32).new(32)
+      arena = Crystal::Evented::Arena(Int32, 96).new(32)
       called = 0
 
       _, index1 = arena.lazy_allocate(2) { called += 1 }
@@ -88,7 +88,7 @@ describe Crystal::Evented::Arena do
     end
 
     it "checks out of bounds" do
-      arena = Crystal::Evented::Arena(Int32).new(32)
+      arena = Crystal::Evented::Arena(Int32, 96).new(32)
       expect_raises(IndexError) { arena.get(Crystal::Evented::Arena::Index.new(-1, 0)) }
       expect_raises(IndexError) { arena.get(Crystal::Evented::Arena::Index.new(33, 0)) }
     end
@@ -96,7 +96,7 @@ describe Crystal::Evented::Arena do
 
   describe "#get?" do
     it "returns previously allocated object" do
-      arena = Crystal::Evented::Arena(Int32).new(32)
+      arena = Crystal::Evented::Arena(Int32, 96).new(32)
       pointer, index = arena.lazy_allocate(30) { |ptr| ptr.value = 654321 }
 
       2.times do
@@ -109,7 +109,7 @@ describe Crystal::Evented::Arena do
     end
 
     it "checks generation" do
-      arena = Crystal::Evented::Arena(Int32).new(32)
+      arena = Crystal::Evented::Arena(Int32, 96).new(32)
       called = 0
 
       pointer1, index1 = arena.lazy_allocate(2) { called += 1 }
@@ -125,7 +125,7 @@ describe Crystal::Evented::Arena do
     end
 
     it "checks out of bounds" do
-      arena = Crystal::Evented::Arena(Int32).new(32)
+      arena = Crystal::Evented::Arena(Int32, 96).new(32)
       arena.get?(Crystal::Evented::Arena::Index.new(-1, 0)).should be_nil
       arena.get?(Crystal::Evented::Arena::Index.new(33, 0)).should be_nil
     end
@@ -133,7 +133,7 @@ describe Crystal::Evented::Arena do
 
   describe "#free" do
     it "deallocates the object" do
-      arena = Crystal::Evented::Arena(Int32).new(32)
+      arena = Crystal::Evented::Arena(Int32, 96).new(32)
       pointer, index1 = arena.lazy_allocate(3) { }
       pointer.value = 123
 
@@ -145,7 +145,7 @@ describe Crystal::Evented::Arena do
     end
 
     it "checks generation" do
-      arena = Crystal::Evented::Arena(Int32).new(32)
+      arena = Crystal::Evented::Arena(Int32, 96).new(32)
       called = 0
 
       _, index1 = arena.lazy_allocate(1) { }
@@ -161,7 +161,7 @@ describe Crystal::Evented::Arena do
     end
 
     it "checks out of bounds" do
-      arena = Crystal::Evented::Arena(Int32).new(32)
+      arena = Crystal::Evented::Arena(Int32, 96).new(32)
       called = 0
 
       arena.free(Crystal::Evented::Arena::Index.new(-1, 0)) { called += 1 }
@@ -169,5 +169,33 @@ describe Crystal::Evented::Arena do
 
       called.should eq(0)
     end
+  end
+
+  it "#each_index" do
+    arena = Crystal::Evented::Arena(Int32, 96).new(32)
+    indices = [] of {Int32, Crystal::Evented::Arena::Index}
+
+    arena.each_index { |i, index| indices << {i, index} }
+    indices.should be_empty
+
+    _, index5 = arena.lazy_allocate(5) { }
+
+    arena.each_index { |i, index| indices << {i, index} }
+    indices.should eq([{5, index5}])
+
+    _, index3 = arena.lazy_allocate(3) { }
+    _, index11 = arena.lazy_allocate(11) { }
+    _, index10 = arena.lazy_allocate(10) { }
+    _, index30 = arena.lazy_allocate(30) { }
+
+    indices.clear
+    arena.each_index { |i, index| indices << {i, index} }
+    indices.should eq([
+      {3, index3},
+      {5, index5},
+      {10, index10},
+      {11, index11},
+      {30, index30},
+    ])
   end
 end
