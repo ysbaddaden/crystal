@@ -29,10 +29,6 @@ module Crystal::System::Thread
   def self.init : Nil
     {% if flag?(:musl) %}
       @@main_handle = current_handle
-    {% elsif flag?(:openbsd) || flag?(:android) %}
-      ret = LibC.pthread_key_create(out current_key, nil)
-      raise RuntimeError.from_os_error("pthread_key_create", Errno.new(ret)) unless ret == 0
-      @@current_key = current_key
     {% end %}
   end
 
@@ -56,51 +52,6 @@ module Crystal::System::Thread
     ret = LibC.sched_yield
     raise RuntimeError.from_errno("sched_yield") unless ret == 0
   end
-
-  # no thread local storage (TLS) for OpenBSD,
-  # we use pthread's specific storage (TSS) instead
-  #
-  # Android appears to support TLS to some degree, but executables fail with
-  # an underaligned TLS segment, see https://github.com/crystal-lang/crystal/issues/13951
-  {% if flag?(:openbsd) || flag?(:android) %}
-    @@current_key = uninitialized LibC::PthreadKeyT
-
-    def self.current_thread : ::Thread
-      if ptr = LibC.pthread_getspecific(@@current_key)
-        ptr.as(::Thread)
-      else
-        # Thread#start sets `Thread.current` as soon it starts. Thus we know
-        # that if `Thread.current` is not set then we are in the main thread
-        self.current_thread = ::Thread.new
-      end
-    end
-
-    def self.current_thread? : ::Thread?
-      if ptr = LibC.pthread_getspecific(@@current_key)
-        ptr.as(::Thread)
-      end
-    end
-
-    def self.current_thread=(thread : ::Thread)
-      ret = LibC.pthread_setspecific(@@current_key, thread.as(Void*))
-      raise RuntimeError.from_os_error("pthread_setspecific", Errno.new(ret)) unless ret == 0
-      thread
-    end
-  {% else %}
-    @[ThreadLocal]
-    @@current_thread : ::Thread?
-
-    def self.current_thread : ::Thread
-      @@current_thread ||= ::Thread.new
-    end
-
-    def self.current_thread? : ::Thread?
-      @@current_thread
-    end
-
-    def self.current_thread=(@@current_thread : ::Thread)
-    end
-  {% end %}
 
   def self.sleep(time : ::Time::Span) : Nil
     req = uninitialized LibC::Timespec
@@ -216,7 +167,7 @@ module Crystal::System::Thread
     action.sa_flags = LibC::SA_SIGINFO
     action.sa_sigaction = LibC::SigactionHandlerT.new do |_, _, _|
       # notify that the thread has been interrupted
-      Thread.current_thread.@suspended.set(true)
+      Thread.current.@suspended.set(true)
 
       # block all signals but SIG_RESUME
       mask = uninitialized LibC::SigsetT

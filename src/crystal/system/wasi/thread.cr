@@ -16,17 +16,6 @@ module Crystal::System::Thread
     raise NotImplementedError.new("Crystal::System::Thread.yield_current")
   end
 
-  def self.current_thread : ::Thread
-    @@current_thread ||= ::Thread.new
-  end
-
-  def self.current_thread? : ::Thread?
-    @@current_thread
-  end
-
-  def self.current_thread=(@@current_thread : ::Thread)
-  end
-
   def self.sleep(time : ::Time::Span) : Nil
     req = uninitialized LibC::Timespec
     req.tv_sec = typeof(req.tv_sec).new(time.seconds)

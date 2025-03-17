@@ -10,12 +10,6 @@ module Crystal::System::Thread
 
   # def self.yield_current : Nil
 
-  # def self.current_thread : ::Thread
-
-  # def self.current_thread? : ::Thread?
-
-  # def self.current_thread=(thread : ::Thread)
-
   # def self.sleep(time : ::Time::Span) : Nil
 
   # private def system_join : Exception?
@@ -45,6 +39,8 @@ end
   {% raise "Thread not supported" %}
 {% end %}
 
+require "./thread_local"
+
 # :nodoc:
 class Thread
   include Crystal::System::Thread
@@ -52,12 +48,16 @@ class Thread
   # all thread objects, so the GC can see them (it doesn't scan thread locals)
   @@threads = uninitialized Thread::LinkedList(Thread)
 
+  # keeps current thread object in thread local storage
+  @@current = uninitialized Thread::Local(Thread)
+
   protected def self.threads : Thread::LinkedList(Thread)
     @@threads
   end
 
   def self.init : Nil
     @@threads = Thread::LinkedList(Thread).new
+    @@current = Thread::Local(Thread).new
     Crystal::System::Thread.init
   end
 
@@ -180,19 +180,22 @@ class Thread
   end
 
   # Returns the Thread object associated to the running system thread.
-  def self.current : Thread
-    Crystal::System::Thread.current_thread
+  def self.current : ::Thread
+    @@current.get do
+      # Thread#start sets `Thread.current` as soon it starts. Thus we know
+      # that if `Thread.current` is not set then we are in the main thread
+      ::Thread.new
+    end
   end
 
   # :nodoc:
-  def self.current? : Thread?
-    Crystal::System::Thread.current_thread?
+  def self.current? : ::Thread
+    @@current.get?
   end
 
   # Associates the Thread object to the running system thread.
-  protected def self.current=(current : Thread) : Thread
-    Crystal::System::Thread.current_thread = current
-    current
+  def self.current=(thread : ::Thread) : ::Thread
+    @@current.set(thread)
   end
 
   # Yields the currently running thread.
