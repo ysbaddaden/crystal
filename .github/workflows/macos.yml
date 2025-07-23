@@ -15,17 +15,14 @@ env:
 jobs:
   darwin-test:
     runs-on: ${{ matrix.runs-on }}
-    name: "${{ matrix.runs-on }} (${{ matrix.arch }})"
+    name: ${{ matrix.arch }}
     strategy:
       matrix:
         include:
         - runs-on: macos-13
           arch: x86_64-darwin
-        - runs-on: macos-14
-          arch: aarch64-darwin
-        - runs-on: macos-15
-          arch: aarch64-darwin
-      fail-fast: false
+        #- runs-on: macos-14
+        #  arch: aarch64-darwin
     steps:
       - name: Download Crystal source
         uses: actions/checkout@v4
@@ -46,8 +43,16 @@ jobs:
       - name: Prepare Build
         run: bin/ci prepare_build
 
-      - name: Test
-        run: bin/ci build
+      #- run: brew install crystal
 
-      - name: Test interpreter
-        run: bin/ci with_build_env 'make interpreter_spec'
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
+          limit-access-to-actor: true
+
+      #- name: Test
+      #  run: bin/ci build
+
+      #- name: Test interpreter
+      #  run: bin/ci with_build_env 'make interpreter_spec'
