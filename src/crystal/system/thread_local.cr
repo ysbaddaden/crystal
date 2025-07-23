@@ -10,7 +10,7 @@ class Thread
     # Reserves space for saving a `T` reference on each thread and registers a
     # destructor that will be called when a thread terminates if the local value
     # has been set.
-    # def self.new(&destructor : Proc(T, Nil))
+    # def self.new(destructor : Proc(T, Nil))
     #   {% unless T < Reference || T < Pointer || T.union_types.all? { |t| t == Nil || t < Reference } %}
     #     {% raise "Can only create Thread::Local with reference types, nilable reference types, or pointer types, not {{T}}" %}
     #   {% end %}

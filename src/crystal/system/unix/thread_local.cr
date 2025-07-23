@@ -8,7 +8,7 @@ class Thread
       new(key)
     end
 
-    def self.new(&destructor : Proc(T, Nil)) : self
+    def self.new(destructor : Proc(T, Nil)) : self
       err = LibC.pthread_key_create(out key, destructor.unsafe_as(Proc(Void*, Nil)))
       raise RuntimeError.from_os_error("pthread_key_create", Errno.new(err)) unless err == 0
       new(key)
