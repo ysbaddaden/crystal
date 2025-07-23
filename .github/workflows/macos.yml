@@ -10,7 +10,6 @@ concurrency:
 
 env:
   SPEC_SPLIT_DOTS: 160
-  CI_NIX_SHELL: true
 
 jobs:
   darwin-test:
@@ -27,32 +26,18 @@ jobs:
       - name: Download Crystal source
         uses: actions/checkout@v4
 
-      - uses: cachix/install-nix-action@v31
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
         with:
-          extra_nix_config: |
-            experimental-features = nix-command
+          detached: true
+          limit-access-to-actor: true
 
-      - uses: cachix/cachix-action@v16
-        with:
-          name: crystal-ci
-          signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
-
-      - name: Prepare System
-        run: bin/ci prepare_system
-
-      - name: Prepare Build
-        run: bin/ci prepare_build
-
-      #- run: brew install crystal
-
-      #- name: Setup tmate session
-      #  uses: mxschmitt/action-tmate@v3
-      #  with:
-      #    detached: true
-      #    limit-access-to-actor: true
+      - name: Setup
+        run: |
+          brew install bdw-gc llvm
+          curl -sL "https://github.com/crystal-lang/crystal/releases/download/1.17.1/crystal-1.17.1-1-darwin-universal.tar.gz" | tar zx
+          echo "PATH=$PWD/crystal-1.17.1-1/bin:/usr/local/opt/llvm/bin:$PATH" >> $GITHUB_ENV
 
       - name: Test
-        run: bin/ci build
+        run: ./bin/simple_ci
 
-      - name: Test interpreter
-        run: bin/ci with_build_env 'make interpreter_spec'
