@@ -238,12 +238,10 @@ module Regex::PCRE2
   #
   # Only a single `match` function can run per thread at any given time, so
   # there can't be any concurrent access to the JIT stack.
-  protected class_getter(jit_stack = Thread::Local(LibPCRE2::JITStack*).new(->(ptr : Void*) {
-    LibPCRE2.jit_stack_free(ptr)
-  })
+  JIT_STACK = Thread::Local(LibPCRE2::JITStack*).new(->LibPCRE2.jit_stack_free)
 
   protected def self.current_jit_stack
-    jit_stack.get do
+    JIT_STACK.get do
       LibPCRE2.jit_stack_create(32_768, 1_048_576, nil) || raise "Error allocating JIT stack"
     end
   end
@@ -253,12 +251,10 @@ module Regex::PCRE2
   # Match data contains a buffer for backtracking when matching in interpreted
   # mode (non-JIT). This buffer is heap-allocated and should be re-used for
   # subsequent matches.
-  protected class_getter(match_data = Thread::Local(LibPCRE2::MatchData*).new(->(ptr : Void*) {
-    LibPCRE2.match_data_free(ptr)
-  })
+  MATCH_DATA = Thread::Local(LibPCRE2::MatchData*).new(->LibPCRE2.match_data_free)
 
   protected def self.current_match_data : LibPCRE2::MatchData*
-    match_data.get do
+    MATCH_DATA.get do
       # the ovector size is clamped to 65535 pairs; we declare the maximum
       # because we allocate the match data buffer once for the thread and need
       # to adapt to any regular expression
