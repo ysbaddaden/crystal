@@ -69,7 +69,6 @@ class Thread
       end
 
       def self.create(destructor : Destructor? = nil) : Key
-
         @@mutex.synchronize do
           key = nil
 
@@ -82,8 +81,8 @@ class Thread
 
           unless key
             # full: must grow
-            key = @@size
-            new_size = Math.pw2ceil(key)
+            key = @@size # == 0 ? 1 : @@size
+            new_size = Math.pw2ceil(key.clamp(4..))
             @@destructors = GC.realloc(@@destructors.as(Void*), sizeof(Destructor) * new_size).as(Destructor*)
             @@size = new_size
           end
