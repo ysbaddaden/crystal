@@ -20,10 +20,12 @@ jobs:
     strategy:
       matrix:
         include:
-        #- runs-on: macos-13
-        #  arch: x86_64-darwin
-        - runs-on: macos-14
-          arch: aarch64-darwin
+        - runs-on: macos-13
+          arch: x86_64-darwin
+        #- runs-on: macos-14
+        #  arch: aarch64-darwin
+        #- runs-on: macos-15
+        #  arch: aarch64-darwin
     steps:
       - name: Download Crystal source
         uses: actions/checkout@v4
@@ -36,9 +38,9 @@ jobs:
 
       - name: Setup
         run: |
-          brew install bdw-gc llvm
+          brew install bdw-gc libffi llvm
           curl -sL "https://github.com/crystal-lang/crystal/releases/download/$RELEASE/crystal-$RELEASE-$REVISION-darwin-universal.tar.gz" | tar zx
-          echo "PATH=$PWD/crystal-$RELEASE-$REVISION/bin:$HOMEBREW_PREFIX/opt/llvm/bin:$PATH" >> $GITHUB_ENV
+          echo "PATH=$PWD/crystal-$RELEASE-$REVISION/bin:$(brew --prefix)/opt/llvm/bin:$PATH" >> $GITHUB_ENV
 
       - name: Test
         run: ./bin/simple_ci
