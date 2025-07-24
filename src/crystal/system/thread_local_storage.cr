@@ -54,39 +54,54 @@ class Thread
     {% else %}
       alias Key = Int32
 
+      FREE = Destructor.new(Pointer(Void).null, Pointer(Void).null)
+      RESERVED = Destructor.new(Pointer(Void).new(-1.to_u64!), Pointer(Void).null)
+
       @[ThreadLocal]
       @@instance = uninitialized Pointer(self)
 
-      @@keys = Atomic(Int32).new(0)
-
       @@mutex = Thread::Mutex.new
       @@destructors = Pointer(Destructor).null
-      @@destructors_size = 0
+      @@size = 0
 
       def self.instance=(@@instance : Pointer(self)) : Pointer(self)
         @@instance
       end
 
       def self.create(destructor : Destructor? = nil) : Key
-        key = @@keys.add(1, :relaxed)
 
-        if destructor
-          @@mutex.synchronize do
-            if key >= (old_size = @@destructors_size)
-              new_size = Math.pw2ceil(key)
-              @@destructors = GC.realloc(@@destructors.as(Void*), sizeof(Destructor) * new_size).as(Destructor*)
-              @@destructors_size = new_size
+        @@mutex.synchronize do
+          key = nil
+
+          0.upto(@@size - 1) do |i|
+            if @@destructors[i] == FREE
+              key = i
+              break
             end
           end
-          @@destructors[key] = destructor
-        end
 
-        key
+          unless key
+            # full: must grow
+            key = @@size
+            new_size = Math.pw2ceil(key)
+            @@destructors = GC.realloc(@@destructors.as(Void*), sizeof(Destructor) * new_size).as(Destructor*)
+            @@size = new_size
+          end
+
+          if destructor
+            @@destructors[key] = destructor
+          else
+            @@destructors[key] = RESERVED
+          end
+
+          key
+        end
       end
 
-      def initialize
-        @values = Pointer(Void*).null
-        @size = 0
+      def self.delete(key : Key) : Void*
+        @@mutex.synchronize do
+          raise RuntimeError.new("Invalid key") unless 0 <= key < @@size
+        end
       end
 
       def self.get(key : Key) : Void*
@@ -101,6 +116,11 @@ class Thread
         @@instance.value.call_destructors
       end
 
+      def initialize
+        @values = Pointer(Void*).null
+        @size = 0
+      end
+
       protected def get(key : Key) : Void*
         if 0 <= key < @size
           @values[key]
@@ -110,10 +130,11 @@ class Thread
       end
 
       protected def set(key : Key, value : Void*) : Void*
-        keys = @@keys.get(:relaxed)
+        keys = @@size
         raise RuntimeError.new("Invalid key") unless 0 <= key < keys
 
         unless key < @size
+          # grow storage table
           @values = GC.realloc(@values.as(Void*), sizeof(Void*) * keys).as(Void**)
           @size = keys
         end
@@ -125,8 +146,9 @@ class Thread
         return if @values.null? || @@destructors.null?
 
         @@mutex.synchronize do
-          @@destructors_size.times do |key|
-            next if (destructor = @@destructors[key]).pointer.null?
+          @@size.times do |key|
+            destructor = @@destructors[key]
+            next if destructor == FREE || destructor == RESERVED
             next if (value = get(key)).null?
 
             @values[key] = Pointer(Void).null
