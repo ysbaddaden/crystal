@@ -12,6 +12,7 @@ env:
   RELEASE: "1.17.1"
   REVISION: "1"
   SPEC_SPLIT_DOTS: 160
+  CRYSTAL_OPTS: -Dwithout_iconv
 
 jobs:
   darwin-test:
