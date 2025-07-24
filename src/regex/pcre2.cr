@@ -1,5 +1,5 @@
 require "./lib_pcre2"
-require "crystal/system/thread_local"
+# require "crystal/system/thread_local"
 
 # :nodoc:
 module Regex::PCRE2
@@ -238,12 +238,14 @@ module Regex::PCRE2
   #
   # Only a single `match` function can run per thread at any given time, so
   # there can't be any concurrent access to the JIT stack.
-  JIT_STACK = Thread::Local(LibPCRE2::JITStack*).new(->LibPCRE2.jit_stack_free)
+  JIT_STACK_KEY = Thread::LocalStorage.create(->(ptr : Void*) {
+    LibPCRE2.jit_stack_free(ptr.as(LibPCRE2::JITStack*))
+  })
 
-  protected def self.current_jit_stack
-    JIT_STACK.get do
+  protected def self.current_jit_stack : LibPCRE2::JITStack*
+    Thread::LocalStorage.get(JIT_STACK_KEY) do
       LibPCRE2.jit_stack_create(32_768, 1_048_576, nil) || raise "Error allocating JIT stack"
-    end
+    end.as(LibPCRE2::JITStack*)
   end
 
   # Match data is unique per thread.
@@ -251,15 +253,17 @@ module Regex::PCRE2
   # Match data contains a buffer for backtracking when matching in interpreted
   # mode (non-JIT). This buffer is heap-allocated and should be re-used for
   # subsequent matches.
-  MATCH_DATA = Thread::Local(LibPCRE2::MatchData*).new(->LibPCRE2.match_data_free)
+  MATCH_DATA_KEY = Thread::LocalStorage.create(->(ptr : Void*) {
+    LibPCRE2.match_data_free(ptr.as(LibPCRE2::MatchData*))
+  })
 
   protected def self.current_match_data : LibPCRE2::MatchData*
-    MATCH_DATA.get do
+    Thread::LocalStorage.get(MATCH_DATA_KEY) do
       # the ovector size is clamped to 65535 pairs; we declare the maximum
       # because we allocate the match data buffer once for the thread and need
       # to adapt to any regular expression
       LibPCRE2.match_data_create(65_535, nil)
-    end
+    end.as(LibPCRE2::MatchData*)
   end
 
   def finalize
