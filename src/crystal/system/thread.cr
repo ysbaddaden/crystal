@@ -45,6 +45,8 @@ end
   {% raise "Thread not supported" %}
 {% end %}
 
+require "./thread_local_storage"
+
 # :nodoc:
 class Thread
   include Crystal::System::Thread
@@ -138,6 +140,8 @@ class Thread
     threads.@mutex.unlock
   end
 
+  @local_storage = LocalStorage.new
+
   # Creates and starts a new system thread.
   def initialize(@name : String? = nil, &@func : Thread ->)
     @system_handle = uninitialized Crystal::System::Thread::Handle
@@ -147,10 +151,11 @@ class Thread
   # Used once to initialize the thread object representing the main thread of
   # the process (that already exists).
   def initialize
+    LocalStorage.instance = pointerof(@local_storage)
+
     @func = ->(t : Thread) { }
     @system_handle = Crystal::System::Thread.current_handle
     @current_fiber = @main_fiber = Fiber.new(stack_address, self)
-
     Thread.threads.push(self)
   end
 
@@ -234,6 +239,8 @@ class Thread
   end
 
   protected def start
+    LocalStorage.instance = pointerof(@local_storage)
+
     Thread.threads.push(self)
     Thread.current = self
     @current_fiber = @main_fiber = fiber = Fiber.new(stack_address, self)
@@ -250,6 +257,7 @@ class Thread
       Thread.threads.delete(self)
       Fiber.inactive(fiber)
       detach { system_close }
+      LocalStorage.call_destructors
     end
   end
 
