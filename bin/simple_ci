@@ -8,7 +8,7 @@ call() {
   if [ "$GITHUB_ACTIONS" = "true" ]; then
     echo "::group::$*"
     /bin/sh -c "$*"
-    echo "::engroup::"
+    echo "::endgroup::"
   else
     echo "+ $*"
     /bin/sh -c "$*"
