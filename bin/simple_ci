@@ -4,24 +4,29 @@ set -e
 JUNIT_OUTPUT=".junit/std_spec.xml"
 DOCS_OPTIONS="--json-config-url=/api/versions.json --canonical-base-url=https://crystal-lang.org/api/latest/"
 
-invoke() {
-  echo "::group::$*"
-  /bin/sh -c "$*"
-  echo "::engroup::"
+call() {
+  if [ "$GITHUB_ACTIONS" = "true" ]; then
+    echo "::group::$*"
+    /bin/sh -c "$*"
+    echo "::engroup::"
+  else
+    echo "+ $*"
+    /bin/sh -c "$*"
+  fi
 }
 
-invoke bin/crystal env
-invoke make std_spec junit_output="$JUNIT_OUTPUT"
+call bin/crystal env
+call make std_spec junit_output="$JUNIT_OUTPUT"
 
-invoke make clean crystal
-invoke bin/crystal env
+call make clean crystal
+call bin/crystal env
 
-invoke make primitives_spec threads=1 junit_output="$JUNIT_OUTPUT"
-invoke make std_spec threads=1 junit_output="$JUNIT_OUTPUT"
-invoke make compiler_spec threads=1 junit_output="$JUNIT_OUTPUT"
+call make primitives_spec threads=1 junit_output="$JUNIT_OUTPUT"
+call make std_spec threads=1 junit_output="$JUNIT_OUTPUT"
+call make compiler_spec threads=1 junit_output="$JUNIT_OUTPUT"
 
-invoke make docs threads=1 DOCS_OPTIONS="$DOCS_OPTIONS"
-invoke make samples
-invoke CRYSTAL_OPTS=--debug make samples
+call make docs threads=1 DOCS_OPTIONS="$DOCS_OPTIONS"
+call make samples
+call CRYSTAL_OPTS=--debug make samples
 
-invoke make interpreter_spec threads=1
+call make interpreter_spec threads=1

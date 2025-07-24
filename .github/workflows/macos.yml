@@ -9,6 +9,8 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 env:
+  RELEASE: "1.17.1"
+  REVISION: "1"
   SPEC_SPLIT_DOTS: 160
 
 jobs:
@@ -35,8 +37,8 @@ jobs:
       - name: Setup
         run: |
           brew install bdw-gc llvm
-          curl -sL "https://github.com/crystal-lang/crystal/releases/download/1.17.1/crystal-1.17.1-1-darwin-universal.tar.gz" | tar zx
-          echo "PATH=$PWD/crystal-1.17.1-1/bin:/usr/local/opt/llvm/bin:$PATH" >> $GITHUB_ENV
+          curl -sL "https://github.com/crystal-lang/crystal/releases/download/$RELEASE/crystal-$RELEASE-$REVISION-darwin-universal.tar.gz" | tar zx
+          echo "PATH=$PWD/crystal-$RELEASE-$REVISION/bin:$HOMEBREW_PREFIX/opt/llvm/bin:$PATH" >> $GITHUB_ENV
 
       - name: Test
         run: ./bin/simple_ci
