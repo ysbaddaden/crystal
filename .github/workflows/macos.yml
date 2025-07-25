@@ -27,21 +27,24 @@ jobs:
           arch: aarch64-darwin
         - runs-on: macos-15
           arch: aarch64-darwin
+      fail-fast: false
     steps:
       - name: Download Crystal source
         uses: actions/checkout@v4
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          detached: true
-          limit-access-to-actor: true
+      #- name: Setup tmate session
+      #  uses: mxschmitt/action-tmate@v3
+      #  with:
+      #    detached: true
+      #    limit-access-to-actor: true
 
       - name: Setup
         run: |
           brew install bdw-gc libffi llvm
           curl -sL "https://github.com/crystal-lang/crystal/releases/download/$RELEASE/crystal-$RELEASE-$REVISION-darwin-universal.tar.gz" | tar zx
+          rm $PWD/crystal-$RELEASE-$REVISION/embedded/lib/libffi.a
           echo "PATH=$PWD/crystal-$RELEASE-$REVISION/bin:$(brew --prefix)/opt/llvm/bin:$PATH" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig"" >> $GITHUB_ENV
 
       - name: Test
         run: ./bin/simple_ci

@@ -7,19 +7,19 @@ DOCS_OPTIONS="--json-config-url=/api/versions.json --canonical-base-url=https://
 call() {
   if [ "$GITHUB_ACTIONS" = "true" ]; then
     echo "::group::$*"
-    /bin/sh -c "$*"
+    "${@}"
     echo "::endgroup::"
   else
     echo "+ $*"
-    /bin/sh -c "$*"
+    "${@}"
   fi
 }
 
-call bin/crystal env
+call bin/crystal version
 call make std_spec junit_output="$JUNIT_OUTPUT"
 
 call make clean crystal
-call bin/crystal env
+call bin/crystal version
 
 call make primitives_spec threads=1 junit_output="$JUNIT_OUTPUT"
 call make std_spec threads=1 junit_output="$JUNIT_OUTPUT"
@@ -27,6 +27,6 @@ call make compiler_spec threads=1 junit_output="$JUNIT_OUTPUT"
 
 call make docs threads=1 DOCS_OPTIONS="$DOCS_OPTIONS"
 call make samples
-call CRYSTAL_OPTS=--debug make samples
+call make samples CRYSTAL_OPTS=--debug
 
 call make interpreter_spec threads=1
