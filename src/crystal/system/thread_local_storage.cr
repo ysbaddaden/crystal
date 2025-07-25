@@ -52,7 +52,7 @@ class Thread
       def self.call_destructors : Nil
       end
     {% else %}
-      alias Key = Int32
+      alias Key = UInt32
 
       FREE = Destructor.new(Pointer(Void).null, Pointer(Void).null)
       RESERVED = Destructor.new(Pointer(Void).new(-1.to_u64!), Pointer(Void).null)
@@ -62,7 +62,7 @@ class Thread
 
       @@mutex = Thread::Mutex.new
       @@destructors = Pointer(Destructor).null
-      @@size = 0
+      @@size = 0_u32
 
       def self.instance=(@@instance : Pointer(self)) : Pointer(self)
         @@instance
@@ -70,28 +70,20 @@ class Thread
 
       def self.create(destructor : Destructor? = nil) : Key
         @@mutex.synchronize do
-          key = nil
+          key = 0_u32
 
-          0.upto(@@size - 1) do |i|
-            if @@destructors[i] == FREE
-              key = i
-              break
-            end
+          while key < @@size
+            break if @@destructors[key] == FREE
+            key &+= 1_u32
           end
 
-          unless key
-            # full: must grow
-            key = @@size # == 0 ? 1 : @@size
-            new_size = Math.pw2ceil(key.clamp(4..))
+          if key == @@size
+            new_size = Math.pw2ceil(key.clamp(4_u32..))
             @@destructors = GC.realloc(@@destructors.as(Void*), sizeof(Destructor) * new_size).as(Destructor*)
             @@size = new_size
           end
 
-          if destructor
-            @@destructors[key] = destructor
-          else
-            @@destructors[key] = RESERVED
-          end
+          @@destructors[key] = destructor || RESERVED
 
           key
         end
@@ -117,11 +109,11 @@ class Thread
 
       def initialize
         @values = Pointer(Void*).null
-        @size = 0
+        @size = 0_u32
       end
 
       protected def get(key : Key) : Void*
-        if 0 <= key < @size
+        if key < @size
           @values[key]
         else
           Pointer(Void).null
@@ -130,7 +122,7 @@ class Thread
 
       protected def set(key : Key, value : Void*) : Void*
         keys = @@size
-        raise RuntimeError.new("Invalid key") unless 0 <= key < keys
+        raise RuntimeError.new("Invalid key") unless key < keys
 
         unless key < @size
           # grow storage table
@@ -155,7 +147,7 @@ class Thread
           end
 
           @values = Pointer(Void*).null
-          @size = 0
+          @size = 0_u32
         end
       end
 
