@@ -1,7 +1,7 @@
 # :nodoc:
 class Thread
   # :nodoc:
-  struct LocalStorage
+  module LocalStorage
     alias Destructor = Proc(Void*, Nil)
 
     def self.get(key : Key, &) : Void*
@@ -52,38 +52,48 @@ class Thread
       def self.call_destructors : Nil
       end
     {% else %}
+      # The key is free to (re)allocate.
+      FREE = Destructor.new(Pointer(Void).null, Pointer(Void).null)
+
+      # The key is allocated without a destructor.
+      INVALID = Destructor.new(Pointer(Void).new(-1.to_u64!), Pointer(Void).new(-1.to_u64!))
+
+      # The maximum number of keys.
+      MAX_KEYS = 128_u32
+
+      # Unsigned so we don't have to deal with negative indexes.
       alias Key = UInt32
 
-      FREE = Destructor.new(Pointer(Void).null, Pointer(Void).null)
-      RESERVED = Destructor.new(Pointer(Void).new(-1.to_u64!), Pointer(Void).null)
-
-      @[ThreadLocal]
-      @@instance = uninitialized Pointer(self)
-
-      @@mutex = Thread::Mutex.new
       @@destructors = Pointer(Destructor).null
+      @@mutex = Thread::Mutex.new
       @@size = 0_u32
 
-      def self.instance=(@@instance : Pointer(self)) : Pointer(self)
-        @@instance
-      end
+      @[ThreadLocal]
+      @@local_table = uninitialized Table*
 
       def self.create(destructor : Destructor? = nil) : Key
         @@mutex.synchronize do
+          # scan for a free key
           key = 0_u32
+          max = @@size
 
-          while key < @@size
+          while key < max
             break if @@destructors[key] == FREE
             key &+= 1_u32
           end
 
-          if key == @@size
-            new_size = Math.pw2ceil(key.clamp(4_u32..))
-            @@destructors = GC.realloc(@@destructors.as(Void*), sizeof(Destructor) * new_size).as(Destructor*)
+          if key == max
+            # full: grow
+            new_size = Math.pw2ceil((max + 1_u32).clamp(4_u32..))
+            raise RuntimeError.new("Too many thread local keys") if new_size > MAX_KEYS
+
+            bytesize = sizeof(Destructor) * new_size
+            @@destructors = GC.realloc(@@destructors.as(Void*), bytesize).as(Destructor*)
             @@size = new_size
           end
 
-          @@destructors[key] = destructor || RESERVED
+          # allocate
+          @@destructors[key] = destructor || INVALID
 
           key
         end
@@ -91,66 +101,73 @@ class Thread
 
       def self.delete(key : Key) : Void*
         @@mutex.synchronize do
-          raise RuntimeError.new("Invalid key") unless 0 <= key < @@size
+          raise RuntimeError.new("Invalid key") if key >= @@size || @@destructors[key] == FREE
+          @@destructors[key] = FREE
         end
       end
 
       def self.get(key : Key) : Void*
-        @@instance.value.get(key)
-      end
-
-      def self.set(key : Key, value : Void*) : Void*
-        @@instance.value.set(key, value)
-      end
-
-      def self.call_destructors : Nil
-        @@instance.value.call_destructors
-      end
-
-      def initialize
-        @values = Pointer(Void*).null
-        @size = 0_u32
-      end
-
-      protected def get(key : Key) : Void*
-        if key < @size
-          @values[key]
+        if (local = @@local_table) && (key < local.value.size)
+          local.value.to_unsafe[key]
         else
           Pointer(Void).null
         end
       end
 
-      protected def set(key : Key, value : Void*) : Void*
-        keys = @@size
-        raise RuntimeError.new("Invalid key") unless key < keys
+      def self.set(key : Key, value : Void*) : Void*
+        local = @@local_table
 
-        unless key < @size
-          # grow storage table
-          @values = GC.realloc(@values.as(Void*), sizeof(Void*) * keys).as(Void**)
-          @size = keys
+        if local.null? || (key >= local.value.size)
+          max = @@size
+          raise RuntimeError.new("Invalid key") unless key < max
+
+          # no thread local table or too small: allocate/grow
+          bytesize = sizeof(Table) + sizeof(Void*) * max
+          local = GC.realloc(local.as(Void*), bytesize).as(Table*)
+          local.value.size = max
+
+          # the GC can't access the local storage, so we must keep a pointer on
+          # Thread.current that must be reachable for the whole time the thread
+          # a alive
+          Thread.current.local_storage = local
+          @@local_table = local
         end
 
-        @values[key] = value
+        local.value.to_unsafe[key] = value
       end
 
-      protected def call_destructors : Nil
-        return if @values.null? || @@destructors.null?
+      def self.call_destructors : Nil
+        return if @@destructors.null?
+        return if (local = @@local_table).null?
 
         @@mutex.synchronize do
           @@size.times do |key|
             destructor = @@destructors[key]
-            next if destructor == FREE || destructor == RESERVED
-            next if (value = get(key)).null?
+            next if destructor == FREE || destructor == INVALID
+            next if key >= local.value.size
+            next if (value = local.value.to_unsafe[key]).null?
 
-            @values[key] = Pointer(Void).null
-            destructor.call(value)
+            local.value.to_unsafe[key] = Pointer(Void).null
+            destructor.call(value) rescue nil
           end
-
-          @values = Pointer(Void*).null
-          @size = 0_u32
         end
       end
 
+      @[Extern]
+      struct Table
+        property size : UInt32
+        @table : StaticArray(Void*, 0)
+
+        # never called
+        private def initialize
+          @size = 0_u32
+          @table = uninitialized StaticArray(Void*, 0)
+        end
+
+        def to_unsafe : Void**
+          @table.to_unsafe
+        end
+      end
     {% end %}
   end
 end

@@ -140,7 +140,9 @@ class Thread
     threads.@mutex.unlock
   end
 
-  @local_storage = LocalStorage.new
+  {% if LocalStorage.has_constant?(:Table) %}
+    property local_storage = Pointer(LocalStorage::Table).null
+  {% end %}
 
   # Creates and starts a new system thread.
   def initialize(@name : String? = nil, &@func : Thread ->)
@@ -151,8 +153,6 @@ class Thread
   # Used once to initialize the thread object representing the main thread of
   # the process (that already exists).
   def initialize
-    LocalStorage.instance = pointerof(@local_storage)
-
     @func = ->(t : Thread) { }
     @system_handle = Crystal::System::Thread.current_handle
     @current_fiber = @main_fiber = Fiber.new(stack_address, self)
@@ -239,8 +239,6 @@ class Thread
   end
 
   protected def start
-    LocalStorage.instance = pointerof(@local_storage)
-
     Thread.threads.push(self)
     Thread.current = self
     @current_fiber = @main_fiber = fiber = Fiber.new(stack_address, self)
