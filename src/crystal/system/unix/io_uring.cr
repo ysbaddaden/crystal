@@ -256,22 +256,22 @@ class Crystal::System::IoUring
     # make new tail and previous writes visible to the kernel threads
     Atomic::Ops.store(@sq_ktail, @sq_tail, :sequentially_consistent, volatile: true)
 
-    if sq_poll?
-      if wait
-        flags |= LibC::IORING_ENTER_SQ_WAIT
-      elsif sq_need_wakeup?
-        flags |= LibC::IORING_ENTER_SQ_WAKEUP
-      else
-        return
-      end
-    end
-
     loop do
+      if sq_poll?
+        if wait
+          flags |= LibC::IORING_ENTER_SQ_WAIT
+        elsif sq_need_wakeup?
+          flags |= LibC::IORING_ENTER_SQ_WAKEUP
+        else
+          return
+        end
+      end
+
       head = Atomic::Ops.load(@sq_khead, :monotonic, volatile: true)
       to_submit = @sq_tail &- head
 
       ret = enter(to_submit, flags: flags)
-      break unless ret == -LibC::EINTR && (!sq_poll? || sq_need_wakeup?)
+      break unless ret == -LibC::EINTR
     end
   end
 
@@ -286,9 +286,18 @@ class Crystal::System::IoUring
       flags: ENTERS.new(flags).to_s
 
     ret = Syscall.io_uring_enter(@fd, to_submit, min_complete, flags, Pointer(Void).null, LibC::SizeT.zero)
-    if ret >= 0 || ret == -LibC::EINTR || ret == -LibC::EBUSY
+    return ret if ret >= 0
+
+    case ret
+    when -LibC::EINTR
+      # interrupted by signal (caller shall retry)
       ret
-    elsif ret == -LibC::EBADR
+    when -LibC::EBUSY
+      # the CQ ring is full and the kernel has overflow CQE waiting
+      # TODO: set a boolean so the next evloop run can process has many CQEs as
+      # possible until max iterations or the CQ ring is emptied
+      ret
+    when -LibC::EBADR
       # CQE ring buffer overflowed, the system is running low on memory and
       # completion entries got dropped despite of IORING_FEAT_NODROP and we
       # can't recover from lost completions as fibers would never be resumed!
