@@ -196,7 +196,7 @@ class Crystal::System::IoUring
   end
 
   def sq_need_wakeup? : Bool
-    sq_flags = Atomic::Ops.load(@sq_flags, :acquire, volatile: true)
+    sq_flags = Atomic::Ops.load(@sq_flags, :monotonic, volatile: true)
     (sq_flags & LibC::IORING_SQ_NEED_WAKEUP) == LibC::IORING_SQ_NEED_WAKEUP
   end
 
@@ -216,12 +216,13 @@ class Crystal::System::IoUring
   # Makes sure there is at least *count* SQE available in the SQ ring so we can
   # submit a chain of SQE at once. Submits pending SQE and waits if needed.
   def reserve(count : Int32) : Nil
-    raise ArgumentError.new("Can't reserve more SQE than available in the SQ ring") if count > @sq_entries.value
+    if count > @sq_entries.value
+      raise ArgumentError.new("Can't reserve more SQE than available in the SQ ring")
+    end
 
     loop do
-      tail = @sq_tail # Atomic::Ops.load(@sq_ktail, :monotonic, volatile: true)
       head = Atomic::Ops.load(@sq_khead, :monotonic, volatile: true)
-      size = tail &- head
+      size = @sq_tail &- head
 
       if (@sq_entries.value - size) >= count
         break
@@ -253,7 +254,7 @@ class Crystal::System::IoUring
   # Blocks until at least one SQE becomes available when *wait* is true.
   def submit(flags : UInt32 = 0_u32, wait : Bool = false)
     # make new tail and previous writes visible to the kernel threads
-    Atomic::Ops.store(@sq_ktail, @sq_tail, :release, volatile: true)
+    Atomic::Ops.store(@sq_ktail, @sq_tail, :sequentially_consistent, volatile: true)
 
     if sq_poll?
       if wait
@@ -301,8 +302,8 @@ class Crystal::System::IoUring
   #
   # WARNING: the yielded pointer is only valid for the duration of the block!
   def each_completed(& : LibC::IoUringCqe* ->) : Nil
-    head = Atomic::Ops.load(@cq_khead, :monotonic, volatile: true)
-    tail = Atomic::Ops.load(@cq_ktail, :acquire, volatile: true)
+    head = Atomic::Ops.load(@cq_khead, :acquire, volatile: true)
+    tail = Atomic::Ops.load(@cq_ktail, :monotonic, volatile: true)
     return if head == tail
 
     until head == tail
