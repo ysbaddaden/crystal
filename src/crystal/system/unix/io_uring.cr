@@ -68,7 +68,7 @@ class Crystal::System::IoUring
   @sq : Void*
   @cq : Void*
 
-  def initialize(sq_entries : UInt32, *, cq_entries : UInt32? = nil, sq_idle : Int32? = nil, wq : Int32? = nil)
+  def initialize(sq_entries : Int, *, cq_entries : Int? = nil, sq_thread_idle : Int? = nil, wq_fd : Int? = nil)
     # setup the ring
     params = LibC::IoUringParams.new
     params.flags |= LibC::IORING_SETUP_NO_SQARRAY if @@no_sqarray
@@ -76,22 +76,22 @@ class Crystal::System::IoUring
     # params.flags |= LibC::IORING_SETUP_TASKRUN_FLAG
 
     if cq_entries
-      params.cq_entries = cq_entries
+      params.cq_entries = cq_entries.to_u32
       params.flags |= LibC::IORING_SETUP_CQSIZE
     end
 
-    if sq_idle
-      params.sq_thread_idle = sq_idle
+    if sq_thread_idle
+      params.sq_thread_idle = sq_thread_idle.to_i32
       params.flags |= LibC::IORING_SETUP_SQPOLL
     end
 
-    if wq
-      params.wq_fd = wq.to_u32
+    if wq_fd
+      params.wq_fd = wq_fd.to_u32
       params.flags |= LibC::IORING_SETUP_ATTACH_WQ
     end
 
     Crystal.trace :evloop, "io_uring_setup"
-    @fd = Syscall.io_uring_setup(sq_entries, pointerof(params))
+    @fd = Syscall.io_uring_setup(sq_entries.to_u32, pointerof(params))
     raise RuntimeError.from_os_error("io_uring_setup", Errno.new(-@fd)) if @fd < 0
 
     @flags = params.flags
@@ -278,14 +278,32 @@ class Crystal::System::IoUring
   # Call `io_uring_enter` syscall. Panics on EBADR (can't recover from lost
   # CQE), returns -EINTR or -EBUSY, and raises on other errnos, otherwise
   # returns the int returned by the syscall.
-  def enter(to_submit : UInt32 = 0, min_complete : UInt32 = 0, flags : UInt32 = 0) : Int32
+  def enter(to_submit : UInt32 = 0, min_complete : UInt32 = 0, flags : UInt32 = 0, timeout : Time::Span?) : Int32
+    if timeout
+      flags |= LibC::IORING_ENTER_EXT_ARG
+
+      ts = uninitialized LibC::Timespec
+      ts.tv_sec = typeof(ts.tv_sec).new(timeout.@seconds)
+      ts.tv_nsec = typeof(ts.tv_nsec).new(timeout.@nanoseconds)
+
+      args = LibC::IoUringGetEventsArg.new(
+        ts : pointerof(ts).address.to_u64!
+      )
+      arg = pointerof(args).as(Void*)
+      argsz = LibC::SizeT.new(sizeof(LibC::IoUringGetEventsArg))
+    else
+      arg = Pointer(Void).null
+      argsz = LibC::SizeT.zero
+    end
+
     Crystal.trace :evloop, "io_uring_enter",
       fd: @fd,
       to_submit: to_submit,
       min_complete: min_complete,
+      timeout: timeout,
       flags: ENTERS.new(flags).to_s
 
-    ret = Syscall.io_uring_enter(@fd, to_submit, min_complete, flags, Pointer(Void).null, LibC::SizeT.zero)
+    ret = Syscall.io_uring_enter(@fd, to_submit, min_complete, flags, arg, argsz)
     return ret if ret >= 0
 
     case ret

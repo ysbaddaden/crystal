@@ -148,6 +148,13 @@ lib LibC
     cq_off : IoCqringOffsets
   end
 
+  struct IoUringGetEventsArg
+    sigmask : UInt64
+    sigmask_sz : UInt32
+    pad : UInt32
+    ts : UInt64
+  end
+
   IORING_FEAT_SINGLE_MMAP     = 1_u32 << 0
   IORING_FEAT_NODROP          = 1_u32 << 1
   IORING_FEAT_SUBMIT_STABLE   = 1_u32 << 2

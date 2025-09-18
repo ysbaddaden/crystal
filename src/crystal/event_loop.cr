@@ -28,8 +28,8 @@ abstract class Crystal::EventLoop
   end
 
   # Creates an event loop instance
-  def self.create : self
-    backend_class.new
+  def self.create(parallelism : Int32 = 1) : self
+    backend_class.new(parallelism)
   end
 
   def self.default_file_blocking? : Bool
@@ -57,6 +57,21 @@ abstract class Crystal::EventLoop
       Crystal::Scheduler.event_loop?
     {% end %}
   end
+
+  {% if flag?(:execution_context) %}
+    # Called whenever the parallelism of the `Fiber::ExecutionContext` is
+    # changed (i.e. when a parallel context is resized).
+    def on_parallelism_change(parallelism : Int32)
+    end
+
+    # Called once before *scheduler* is started. Optional hook.
+    def register(scheduler : Fiber::ExecutionContext::Scheduler, index : Int32) : Nil
+    end
+
+    # Called once before *scheduler* shutdown. Optional hook.
+    def unregister(scheduler : Fiber::ExecutionContext::Scheduler) : Nil
+    end
+  {% end %}
 
   # Runs the loop.
   #

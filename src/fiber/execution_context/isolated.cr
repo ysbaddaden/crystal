@@ -48,7 +48,11 @@ module Fiber::ExecutionContext
     @main_fiber : Fiber
 
     # :nodoc:
-    getter(event_loop : Crystal::EventLoop) { Crystal::EventLoop.create }
+    getter(event_loop : Crystal::EventLoop) do
+      evloop = Crystal::EventLoop.create
+      evloop.register(self, index: 0)
+      evloop
+    end
 
     getter? running : Bool = true
     @enqueued = false
@@ -207,6 +211,7 @@ module Fiber::ExecutionContext
         @running = false
         @wait_list.consume_each(&.value.enqueue)
       end
+      @event_loop.try(&.unregister(self))
       ExecutionContext.execution_contexts.delete(self)
     end
 
