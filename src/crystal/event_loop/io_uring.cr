@@ -5,11 +5,27 @@ end
 require "c/poll"
 require "c/sys/socket"
 require "./io_uring/*"
+require "./timers"
 
 {% if flag?(:execution_context) %}
-  class Fiber::ExecutionContext::Scheduler
-    # :nodoc:
-    property! __evloop_ring : Crystal::EventLoop::Ring
+  class Fiber
+    module ExecutionContext
+      module Scheduler
+        # :nodoc:
+        def __evloop_ring : Crystal::EventLoop::IoUring::Ring
+          @__evloop_ring.not_nil!("Fiber::ExecutionContext::Scheduler#__evloop_ring cannot be nil")
+        end
+
+        # :nodoc:
+        def __evloop_ring? : Crystal::EventLoop::IoUring::Ring?
+          @__evloop_ring
+        end
+
+        # :nodoc:
+        def __evloop_ring=(@__evloop_ring : Crystal::EventLoop::IoUring::Ring?)
+        end
+      end
+    end
   end
 {% end %}
 
@@ -25,12 +41,12 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   end
 
   # While io_uring was introduced in Linux 5.1, some features and opcodes that
-  # we require have only been added between Linux 5.3 to 5.18. The event loop is
-  # thus incompatible with:
+  # we require are only available in Linux 5.18. The event loop is thus
+  # incompatible with:
   #
   # - Linux 5.4 LTS (EOL Dec 2025)
   # - Linux 5.10 SLTS (EOL Jan 2031)
-  # - Linux 5.15 LTS (EOL Dev 2026)
+  # - Linux 5.15 LTS (EOL Dec 2026)
   def self.supported? : Bool
     return false unless System::IoUring.supported?
 
@@ -56,7 +72,8 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
 
   DEFAULT_SQ_ENTRIES = 16
   DEFAULT_CQ_ENTRIES = 128
-  DEFAULT_SQ_THREAD_IDLE = 2000
+  # DEFAULT_SQ_THREAD_IDLE = 2000
+  DEFAULT_SQ_THREAD_IDLE = nil
 
   CLOSE_RING_EVENT = GC.malloc(sizeof(Event)).as(Event*)
 
@@ -71,21 +88,28 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     )
   end
 
-  @main_ring : Uring
+  @main_ring : Ring
+  @tick = Atomic(UInt32).new(0_u32)
+
+  {% if flag?(:execution_context) %}
+    @rings = uninitialized Array(Ring?)
+  {% end %}
 
   def initialize(parallelism : Int32)
     @main_ring = self.class.create_ring
+    @timers = Timers(Event).new
 
     {% if flag?(:execution_context) %}
-      @rings = Array(Ring?).new(parallelism)
-      @rings << @main_ring
-      @mutex = Thread::Mutex.new
+      @rings = Array(Ring?).new(parallelism) { nil }
     {% end %}
+
+    # protects both @rings mutations (rare) and @timers (frequent)
+    @mutex = Thread::Mutex.new
   end
 
   def after_fork_before_exec : Nil
     {% if flag?(:execution_context) %}
-      @rings.each(&.close)
+      @rings.each(&.try(&.close))
     {% else %}
       @main_ring.close
     {% end %}
@@ -115,32 +139,49 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   end
 
   {% if flag?(:execution_context) %}
-    def on_parallelism_change(parallelism : Int32)
+    # The rings array might become full after some resizes (e.g. resize up, or a
+    # resize down followed by a resize up while the rings haven't been closed,
+    # yet), in which case we manually dup and grow the array so it's internal
+    # buffer is never reallocated (invalidating the old pointer) so a full
+    # evloop run can safely iterate the rings array without locking the mutex.
+    def register(scheduler : Fiber::ExecutionContext::Scheduler, index : Int32) : Nil
+      if index == 0
+        # the first scheduler always uses the main ring
+        scheduler.__evloop_ring = @main_ring
+        return
+      end
+
+      ring = self.class.create_ring(@main_ring)
+      scheduler.__evloop_ring = ring
+
       @mutex.synchronize do
-        # can't shrink the rings' array: a ring may still have pending ops!
-        return if parallelism <= @rings.parallelism
+        if index = @rings.index(nil)
+          @rings[index] = ring
+        else
+          # dup and grow the array
+          rings = Array(Ring?).new(@rings.size * 2)
+          @rings.each { |r| rings << r if r }
+          rings << ring
 
-        # don't reallocate so a full evloop run can safely iterate without
-        # having to lock the mutex
-        rings = Array(Ring?).new(parallelism) { |index| @rings[index]? }
+          # the fence is required to make sure that the new array is fully
+          # populated before we replace the @rings reference
+          Atomic.fence(:sequentially_consistent)
 
-        # make sure that *rings* has been populated before we replace the
-        # reference
-        Atomic::Ops.store(pointerof(@rings), rings, :sequentially_consistent, volatile: false)
+          @rings = rings
+        end
       end
     end
 
-    def register(scheduler : Fiber::ExecutionContext::Scheduler, index : Int32) : Nil
-      scheduler.__evloop_ring = @rings[index]
-    end
-
+    # The ring might have operations pending, for example the parallel context
+    # has been resized down and is shutting down schedulers, so we must delay
+    # the actual close to after the ring's queue has been drained.
+    #
+    # We keep the ring in the rings array for a full scan to eventually receive
+    # the CQE for the close ring event.
     def unregister(scheduler : Fiber::ExecutionContext::Scheduler) : Nil
       return unless ring = scheduler.__evloop_ring?
       scheduler.__evloop_ring = nil
 
-      # The ring might have operations pending, for example the parallel context
-      # has been resized down and is shutting down schedulers, so we must delay
-      # the actual close to after the ring's queue has been drained.
       ring.submit do |sqe|
         sqe.value.opcode = LibC::IORING_OP_NOP
         sqe.value.flags = LibC::IOSQE_IO_DRAIN
@@ -161,62 +202,81 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   end
 
   {% if flag?(:execution_context) %}
-    def run(queue : Fiber::List*, blocking : Bool) : Bool
+    def run(queue : Fiber::List*, blocking : Bool) : Nil
       system_run(blocking) { |fiber| queue.value.push(fiber) }
     end
   {% end %}
 
+  # Usually scans the local CQ ring only.
+  #
+  # When blocking (nothing to do) or every once in a while (to avoid some fibers
+  # monopolizing the threads), it runs a full scan by iterating all the rings
+  # one by one. This allows to check the rings of shutdown (or parked?)
+  # schedulers and tries to avoid ready events being blocked by a busy thread.
+  #
+  # Eventually processes timers.
   private def system_run(blocking : Bool, & : Fiber ->) : Nil
     Crystal.trace :evloop, "run", blocking: blocking
-
-    size = 0
+    enqueued = 0
 
     {% if flag?(:execution_context) %}
+      # dereference @rings once (it may be replaced in parallel)
       rings = @rings
 
-      if rings.size > 1 && (blocking || ring.once_in_a_while?)
-        # when blocking or every once in a while (to check the rings of parked
-        # or shutdown schedulers + avoid ready events being blocked by a busy
-        # thread), we run a full scan of the rings; we iterate the rings from a
-        # random entry to avoid having a bias on the first ones
-        i = ring.@rng.rand(0...rings.size)
-
-        rings.size.times do |j|
-          next unless ring = rings[(i + j) % rings.size]
-          # next if ring.empty?
-
-          # try to lock the CQ ring, abort if already locked (another thread is
-          # processing it)
-          if ring.cq_trylock?
-            process_cqes(ring) do |fiber|
-              yield fiber
-              size += 1
-            end
-          end
-
-          # abort when an arbitrary amount of events has been processed so we
-          # don't block the current thread for longer than necessary
-          return if size >= 128
-        end
-
-        return unless size == 0
+      if rings.size > 1 && (blocking || once_in_a_while?)
+        # iterate from a random entry to avoid a bias on the first ones
+        start = ring.@rng.rand(0...rings.size)
+        enqueued = process_all(rings, start) { |fiber| yield fiber }
       end
     {% end %}
 
-    # only process the local CQ ring
+    process_local(blocking) { |fiber| yield fiber } if enqueued == 0
+    process_timers { |fiber| yield fiber }
+  end
+
+  private def once_in_a_while?
+    @tick.add(1, :relaxed) == 51
+  end
+
+  private def process_all(rings, i, &)
+    enqueued = 0
+
+    rings.size.times do |j|
+      next unless ring = rings[(i + j) % rings.size]
+
+      # try to lock the CQ ring, abort if already locked (another thread is
+      # processing it)
+      ring.cq_trylock? do
+        process_cqes(ring) do |fiber|
+          yield fiber
+
+          # abort when an arbitrary amount of events has been processed so we
+          # don't block the current thread for longer than necessary
+          return enqueued if (enqueued += 1) >= 128
+        end
+      end
+    end
+
+    enqueued
+  end
+
+  private def process_local(blocking, &)
     ring = self.ring
+    enqueued = 0
+
     ring.cq_lock do
       # check CQEs (avoiding syscalls)
       process_cqes(ring) do |fiber|
         yield fiber
-        size += 1
+        enqueued += 1
       end
 
-      case size
+      case enqueued
       when 0
         # CQ was empty: ask and/or wait for completions
         ring.waiting do
-          ring.enter(min_complete: blocking ? 1_u32 : 0_u32, flags: LibC::IORING_ENTER_GETEVENTS)
+          min_complete, timeout = wait_until(blocking)
+          ring.enter(min_complete: min_complete, flags: LibC::IORING_ENTER_GETEVENTS, timeout: timeout)
         end
       when ring.@cq_entries.value
         # CQ was full: tell kernel that it can report pending completions
@@ -227,30 +287,81 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
 
       process_cqes(ring) { |fiber| yield fiber }
     end
+
+    return false
+  end
+
+  # Determines the relative timeout until the next ready timer.
+  #
+  # There is a race condition when a parallel thread adds a timer that would
+  # resume earlier, but that thread will eventually wait on its own ring and
+  # resume earlier.
+  private def wait_until(blocking)
+    min_complete, timeout = 0, nil
+
+    if blocking
+      min_complete = 1
+
+      if abstime = @mutex.synchronize { @timers.next_ready? }
+        seconds, nanoseconds = System::Time.monotonic
+        timeout = abstime - Time::Span.new(seconds: seconds, nanoseconds: nanoseconds)
+
+        unless timeout.positive?
+          # some timers have expired: don't wait
+          min_complete = 0
+          timeout = nil
+        end
+      end
+    end
+
+    {min_complete, timeout}
   end
 
   private def process_cqes(ring, &)
-    size = 0
-
     ring.each_completed do |cqe|
       Ring.trace(cqe)
 
-      # skip CQE without an Event
-      next unless event = Pointer(Event).new(cqe.value.user_data)
-
-      if event == CLOSE_RING_EVENT
-        @mutex.synchronize do
-          if index = @rings.index(ring)
-            @rings[index] = nil
+      case event = Pointer(Event).new(cqe.value.user_data)
+      when Pointer(Event).null
+        # skip CQE without an Event
+      when CLOSE_RING_EVENT
+        {% if flag?(:execution_context) %}
+          @mutex.synchronize do
+            # a nilable reference is basically a null pointer (non mixed union):
+            # we can safely nillify the value (single write) which is thread safe,
+            # otherwise we'd have to dup the array
+            if index = @rings.index(ring)
+              @rings[index] = nil
+            end
           end
-        end
-        ring.close
+          ring.close
+        {% end %}
         return
+      else
+        event.value.res = cqe.value.res
+        # event.value.flags = cqe.value.flags
+        yield event.value.fiber
       end
+    end
+  end
 
+  private def process_timers(&)
+    return if @timers.empty?
+
+    timers = uninitialized Pointer(Event)[32]
+    count = 0
+
+    @mutex.synchronize do
+      @timers.dequeue_ready do |event|
+        timers[count] = event
+        count += 1
+        break if count == timers.size
+      end
+    end
+
+    timers.to_slice[0, count].each do |event|
       fiber = event.value.fiber
 
-      # TODO: shouldn't happen here (but in dedicated process cancelable timers block)
       if event.value.type.select_timeout?
         next unless select_action = fiber.timeout_select_action
         fiber.timeout_select_action = nil
@@ -258,17 +369,16 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
         fiber.@timeout_event.as(FiberEvent).clear
       end
 
-      event.value.res = cqe.value.res
-      # event.value.flags = cqe.value.flags
-
       yield fiber
     end
   end
 
   def interrupt : Nil
-    return unless waiting_ring = @rings.find_by(&.try(&.waiting?))
+    # search a waiting ring to wakeup
+    return unless waiting_ring = @rings.find(&.try(&.waiting?))
 
-    # we might interrupt from a raw thread, with no scheduler nor evloop
+    # try to use the local ring and fallback to the actual ring (we might
+    # interrupt from a raw thread)
     ring = ring? || waiting_ring
 
     ring.submit do |sqe|
@@ -277,32 +387,20 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     end
   end
 
-  # timers
-
-  # TODO: store cancelable timers in `Crystal::Timers`, wait until next ready
-  # timeout on blocking evloop runs; process ready timers on evloop runs (skip
-  # if already processing).
+  # (cancelable) timers
 
   def add_timer(event : Event*) : Nil
-    ring.submit do |sqe|
-      sqe.value.opcode = LibC::IORING_OP_TIMEOUT
-      sqe.value.user_data = event.address.to_u64!
-      sqe.value.addr = event.value.timespec.address.to_u64!
-      sqe.value.len = 1
-    end
+    @mutex.synchronize { @timers.add(event) }
   end
 
   def delete_timer(event : Event*) : Nil
-    ring.submit do |sqe|
-      sqe.value.opcode = LibC::IORING_OP_TIMEOUT_REMOVE
-      sqe.value.addr = event.address.to_u64!
-    end
+    @mutex.synchronize { @timers.delete(event) }
   end
 
   # fiber interface, see Crystal::EventLoop
 
   def sleep(duration : Time::Span) : Nil
-    async_impl(type) do |event|
+    async_impl(:sleep) do |event|
       event.value.timeout = duration
 
       ring.submit do |sqe|
@@ -333,7 +431,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   def open(path : String, flags : Int32, permissions : File::Permissions, blocking : Bool?) : {System::FileDescriptor::Handle, Bool} | Errno
     path.check_no_null_byte
 
-    fd = ring.async(LibC::IORING_OP_OPENAT) do |sqe|
+    fd = async(LibC::IORING_OP_OPENAT) do |sqe|
       sqe.value.fd = LibC::AT_FDCWD
       sqe.value.addr = path.to_unsafe.address.to_u64!
       sqe.value.sflags.open_flags = flags | LibC::O_CLOEXEC
@@ -448,7 +546,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   end
 
   def accept(socket : ::Socket) : {::Socket::Handle, Bool}?
-    ret = ring.async(LibC::IORING_OP_ACCEPT, socket.@read_timeout) do |sqe|
+    ret = async(LibC::IORING_OP_ACCEPT, socket.@read_timeout) do |sqe|
       sqe.value.fd = socket.fd
       sqe.value.sflags.accept_flags = LibC::SOCK_CLOEXEC
     end
@@ -465,7 +563,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     sockaddr = address.to_unsafe # OPTIMIZE: #to_unsafe allocates (not needed)
     addrlen = address.size
 
-    ret = ring.async(LibC::IORING_OP_CONNECT, timeout) do |sqe|
+    ret = async(LibC::IORING_OP_CONNECT, timeout) do |sqe|
       sqe.value.fd = socket.fd
       sqe.value.addr = sockaddr.address.to_u64!
       sqe.value.u1.off = addrlen.to_u64!
@@ -484,7 +582,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     sockaddr = address.to_unsafe # OPTIMIZE: #to_unsafe allocates (not needed)
     addrlen = address.size
 
-    res = ring.async(LibC::IORING_OP_SEND) do |sqe|
+    res = async(LibC::IORING_OP_SEND) do |sqe|
       sqe.value.fd = socket.fd
       sqe.value.addr = slice.to_unsafe.address.to_u64!
       sqe.value.len = slice.size.to_u64!
@@ -511,7 +609,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     iovec = LibC::Iovec.new(iov_base: slice.to_unsafe, iov_len: slice.size)
     msghdr = LibC::Msghdr.new(msg_name: pointerof(sockaddr), msg_namelen: addrlen, msg_iov: pointerof(iovec), msg_iovlen: 1)
 
-    res = ring.async(LibC::IORING_OP_RECVMSG) do |sqe|
+    res = async(LibC::IORING_OP_RECVMSG) do |sqe|
       sqe.value.fd = socket.fd
       sqe.value.addr = pointerof(msghdr).address.to_u64!
     end
@@ -546,7 +644,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
 
   private def async_rw(opcode, io, slice, timeout, &)
     loop do
-      res = ring.async(opcode, timeout) do |sqe|
+      res = async(opcode, timeout) do |sqe|
         sqe.value.fd = io.fd
         sqe.value.u1.off = -1
         sqe.value.addr = slice.to_unsafe.address.to_u64!
@@ -560,7 +658,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   end
 
   private def async_poll(io, poll_events, timeout, &)
-    res = ring.async(LibC::IORING_OP_POLL_ADD, timeout) do |sqe|
+    res = async(LibC::IORING_OP_POLL_ADD, timeout) do |sqe|
       sqe.value.fd = io.fd
       sqe.value.sflags.poll_events = poll_events | LibC::POLLERR | LibC::POLLHUP
     end
@@ -605,17 +703,16 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
 
       ring.submit(sqes.to_slice[0, count]) do
         sqes[0].value.opcode = opcode
-        sqes[0].value.event = event.address.to_u64!
+        sqes[0].value.user_data = event.address.to_u64!
         yield sqes[0]
 
         if link_timeout
           event.value.timeout = link_timeout
 
           # chain the operations
-          sqes[0].value.flags = op_sqe.value.flags | LibC::IOSQE_IO_LINK
+          sqes[0].value.flags = sqes[0].value.flags | LibC::IOSQE_IO_LINK
 
           # configure the timeout operation
-          sqes[1] = unsafe_next_sqe
           sqes[1].value.opcode = LibC::IORING_OP_LINK_TIMEOUT
           sqes[1].value.addr = event.value.timespec.address.to_u64!
           sqes[1].value.len = 1
@@ -624,7 +721,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     end
   end
 
-  private def async_impl(type = Event::Type::Async, &)
+  private def async_impl(type : Event::Type = :async, &)
     event = Event.new(type, Fiber.current)
     yield pointerof(event)
     Fiber.suspend

@@ -1,17 +1,15 @@
 require "../../system/unix/io_uring"
 
 class Crystal::EventLoop::IoUring < Crystal::EventLoop
+  # Extends the system abstraction with additional data and helpers tailored
+  # for the event loop implementation.
   class Ring < System::IoUring
-    @tick = 0_u32
+    # TODO: not needed after <https://github.com/crystal-lang/crystal/issues/16157>
     @rng = Random::PCG32.new
+
     @sq_lock = Thread::Mutex.new
     @cq_lock = Thread::Mutex.new
-
     getter? waiting : Bool = false
-
-    def once_in_a_while? : Bool
-      (@tick &+= 1) == 53
-    end
 
     def waiting(&)
       @waiting = true
@@ -20,6 +18,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       @waiting = false
     end
 
+    # Acquires the SQ lock for the duration of the block.
     def sq_lock(&)
       {% if flag?(:execution_context) %}
         @sq_lock.synchronize { yield }
@@ -28,6 +27,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       {% end %}
     end
 
+    # Acquires the CQ lock for the duration of the block.
     def cq_lock(&)
       {% if flag?(:execution_context) %}
         @cq_lock.synchronize { yield }
@@ -36,6 +36,8 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       {% end %}
     end
 
+    # Tries to acquire the CQ lock for the duration of the block. Returns
+    # immediately if the CQ lock couldn't be acquired.
     def cq_trylock?(&)
       {% if flag?(:execution_context) %}
         if @cq_lock.try_lock
@@ -50,6 +52,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       {% end %}
     end
 
+    # Locks the SQ ring, reserves exactly one SQE and submits before returning.
     def submit(&)
       sq_lock do
         sqe = next_sqe
@@ -60,6 +63,8 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       end
     end
 
+    # Locks the SQ ring, reserves as many SQE as needed to fill *sqes* and
+    # submits before returning.
     def submit(sqes, &)
       sq_lock do
         reserve(sqes.size)

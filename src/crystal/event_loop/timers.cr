@@ -18,10 +18,17 @@ struct Crystal::EventLoop::Timers(T)
     @heap.empty?
   end
 
-  # Returns the time of the next ready timer (if any).
+  # Returns the absolute time of the next ready timer (if any).
   def next_ready? : Time::Span?
     if event = @heap.first?
       event.value.wake_at
+    end
+  end
+
+  # Returns the relative time until the next ready timer (if any).
+  def next_ready_as_timeout? : Time::Span?
+    if abstime = next_ready?
+      abstime - now
     end
   end
 

@@ -145,7 +145,7 @@ module Fiber::ExecutionContext
     # use an atomic/fence to make sure that @size can only be incremented
     # *after* the value has been written to @buffer.
     private def start_schedulers(capacity)
-      capacity.times { |index| @schedulers << start_scheduler }
+      capacity.times { |index| @schedulers << start_scheduler(index) }
     end
 
     private def start_scheduler(index)

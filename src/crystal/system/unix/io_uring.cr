@@ -59,7 +59,7 @@ class Crystal::System::IoUring
     (@@opcodes.not_nil![opcode].flags & LibC::IO_URING_OP_SUPPORTED) == LibC::IO_URING_OP_SUPPORTED
   end
 
-  @fd : Int32
+  getter fd : Int32
   @flags : UInt32
   @sq_size : UInt32
   @cq_size : UInt32
@@ -89,6 +89,10 @@ class Crystal::System::IoUring
       params.wq_fd = wq_fd.to_u32
       params.flags |= LibC::IORING_SETUP_ATTACH_WQ
     end
+
+    # The following is boilerplate code to map the rings from kernel land to
+    # user land, with some slight differences based on the running kernel
+    # supported features (for example single mmap, no SQ array).
 
     Crystal.trace :evloop, "io_uring_setup"
     @fd = Syscall.io_uring_setup(sq_entries.to_u32, pointerof(params))
@@ -278,7 +282,7 @@ class Crystal::System::IoUring
   # Call `io_uring_enter` syscall. Panics on EBADR (can't recover from lost
   # CQE), returns -EINTR or -EBUSY, and raises on other errnos, otherwise
   # returns the int returned by the syscall.
-  def enter(to_submit : UInt32 = 0, min_complete : UInt32 = 0, flags : UInt32 = 0, timeout : Time::Span?) : Int32
+  def enter(to_submit : Int = 0, min_complete : Int = 0, flags : UInt32 = 0, timeout : ::Time::Span? = nil) : Int32
     if timeout
       flags |= LibC::IORING_ENTER_EXT_ARG
 
@@ -286,9 +290,7 @@ class Crystal::System::IoUring
       ts.tv_sec = typeof(ts.tv_sec).new(timeout.@seconds)
       ts.tv_nsec = typeof(ts.tv_nsec).new(timeout.@nanoseconds)
 
-      args = LibC::IoUringGetEventsArg.new(
-        ts : pointerof(ts).address.to_u64!
-      )
+      args = LibC::IoUringGetEventsArg.new(ts: pointerof(ts).address.to_u64!)
       arg = pointerof(args).as(Void*)
       argsz = LibC::SizeT.new(sizeof(LibC::IoUringGetEventsArg))
     else
@@ -303,7 +305,7 @@ class Crystal::System::IoUring
       timeout: timeout,
       flags: ENTERS.new(flags).to_s
 
-    ret = Syscall.io_uring_enter(@fd, to_submit, min_complete, flags, arg, argsz)
+    ret = Syscall.io_uring_enter(@fd, to_submit.to_u32, min_complete.to_u32, flags, arg, argsz)
     return ret if ret >= 0
 
     case ret

@@ -7,13 +7,14 @@ class Crystal::EventLoop::IoUring::FiberEvent
   end
 
   def add(timeout : Time::Span) : Nil
-    @event.timeout = timeout
+    s, ns = System::Time.monotonic
+    @event.wake_at = Time::Span.new(seconds: s, nanoseconds: ns) + timeout
     EventLoop.current.as(IoUring).add_timer(pointerof(@event))
   end
 
   # select timeout has been cancelled
   def delete : Nil
-    return unless @event.timeout?
+    return unless @event.wake_at?
     EventLoop.current.as(IoUring).delete_timer(pointerof(@event))
     clear
   end
@@ -25,6 +26,6 @@ class Crystal::EventLoop::IoUring::FiberEvent
 
   # the timer triggered (already dequeued from eventloop)
   def clear : Nil
-    @event.timeout = nil
+    @event.wake_at = nil
   end
 end
