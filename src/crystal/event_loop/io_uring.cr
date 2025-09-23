@@ -44,6 +44,9 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   # we require are only available in Linux 5.18. The event loop is thus
   # incompatible with:
   #
+  # FIXME: while IORING_OP_ASYNC_CANCEL was introduced in Linux 5.5, the
+  # IORING_ASYNC_CANCEL_FD flag was only introduced in Linux 5.19.
+  #
   # - Linux 5.4 LTS (EOL Dec 2025)
   # - Linux 5.10 SLTS (EOL Jan 2031)
   # - Linux 5.15 LTS (EOL Dec 2026)
@@ -70,10 +73,9 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       System::IoUring.supports_opcode?(LibC::IORING_OP_MSG_RING)
   end
 
-  DEFAULT_SQ_ENTRIES = 16
-  DEFAULT_CQ_ENTRIES = 128
-  # DEFAULT_SQ_THREAD_IDLE = 2000
-  DEFAULT_SQ_THREAD_IDLE = nil
+  DEFAULT_SQ_ENTRIES     =  16
+  DEFAULT_CQ_ENTRIES     = 128
+  DEFAULT_SQ_THREAD_IDLE = nil # 200 (in milliseconds)
 
   CLOSE_RING_EVENT = GC.malloc(sizeof(Event)).as(Event*)
 
@@ -377,13 +379,23 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     # search a waiting ring to wakeup
     return unless waiting_ring = @rings.find(&.try(&.waiting?))
 
-    # try to use the local ring and fallback to the actual ring (we might
-    # interrupt from a raw thread)
-    ring = ring? || waiting_ring
+    # try to notify the waiting ring through the local ring (every scheduler
+    # should have one), fallback to a syscall (Linux 6.13) or to a cross ring
+    # submit for older kernels
+    ring = ring?
+    ring = waiting_ring if ring.nil? && !System::IoUring.supports_register_send_msg_ring?
 
-    ring.submit do |sqe|
-      sqe.value.opcode = LibC::IORING_OP_MSG_RING
-      sqe.value.fd = waiting_ring.fd
+    if ring
+      ring.submit do |sqe|
+        sqe.value.opcode = LibC::IORING_OP_MSG_RING
+        sqe.value.fd = waiting_ring.fd
+      end
+    else
+      sqe = LibC::IoUringSqe.new
+      sqe.opcode = LibC::IORING_OP_MSG_RING
+      sqe.fd = waiting_ring.fd
+      ret = System::Syscall.io_uring_register(-1, LibC::IORING_REGISTER_SEND_MSG_RING, pointerof(sqe).as(Void*), 1)
+      raise RuntimeError.from_os_error("io_uring_register(IORING_REGISTER_SEND_MSG_RING)", Errno.new(-ret)) if ret < 0
     end
   end
 
@@ -487,9 +499,19 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     return unless fd = file_descriptor.close_volatile_fd?
 
     # FIXME: we must submit an IORING_OP_ASYNC_CANCEL to every ring (across
-    # execution contexts) that has a pending READ/WRITE/POLL operation on the
-    # IO::FileDescriptor; we can't just link CANCEL to CLOSE on the local
-    # ring...
+    # execution contexts) that has a pending IORING_OP_READ or IORING_OP_WRITE
+    # operation on the IO::FileDescriptor; we can't just link CANCEL to CLOSE on
+    # the local ring (requires SQ lock so any thread can submit to the ring).
+    #
+    # NOTE: IORING_OP_POLL_ADD operations don't need to be canceled (POLLERR
+    # and/or POLLHUP / POLLRDHUP are enough).
+    #
+    # TODO: consider IORING_REGISTER_SYNC_CANCEL (Linux 6.0) that is synchronous
+    # (bad) but allows to target any ring safely and to skip the SQ lock for
+    # _every_ operation (good).
+    #
+    # OPTIMIZE: if the pending ops are on this ring (lucky) we can keep
+    # submitting an IORING_OP_ASYNC_CANCEL linked to an IORING_OP_CLOSE.
 
     async_close(fd) do |sqe|
       # one thread closing a fd won't interrupt reads or writes happening in

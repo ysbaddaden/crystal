@@ -18,6 +18,11 @@ lib LibC
     tm_zone : Char*
   end
 
+  struct KernelTimespec
+    tv_sec : LongLong
+    tv_nsec : LongLong
+  end
+
   struct Timespec
     tv_sec : TimeT
     tv_nsec : Long

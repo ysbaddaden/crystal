@@ -1,6 +1,5 @@
 require "c/linux/io_uring"
 require "./syscall"
-require "./eventfd"
 
 # WARNING: while the syscalls are thread safe, the rings and the overall
 # abstraction are not: accesses to the SQ and CQ rings aren't synchronized!
@@ -14,6 +13,8 @@ class Crystal::System::IoUring
   @@opcodes : Slice(LibC::IoUringProbeOp)?
 
   class_getter?(supported : Bool) { check_kernel_support? }
+  class_getter? supports_register_send_msg_ring : Bool = false
+  class_getter? supports_register_sync_cancel : Bool = false
 
   def self.check_kernel_support? : Bool
     # try with "no sqarray" flag first (available since linux 6.6)
@@ -32,11 +33,13 @@ class Crystal::System::IoUring
       @@no_sqarray = false
     end
 
+    # record supported features
     @@features = params.features
 
     begin
+      # probe supported opcodes
       probe_sz = sizeof(LibC::IoUringProbe) + LibC::IORING_OP_LAST * sizeof(LibC::IoUringProbeOp)
-      probe = GC.malloc(probe_sz).as(LibC::IoUringProbe*)
+      probe = GC.malloc_atomic(probe_sz).as(LibC::IoUringProbe*)
       raise RuntimeError.from_errno("malloc") unless probe
       LibIntrinsics.memset(probe, 0_u8, probe_sz, false)
 
@@ -44,8 +47,21 @@ class Crystal::System::IoUring
       raise RuntimeError.from_os_error("io_uring_register", Errno.new(-ret)) if ret < 0
 
       @@opcodes = Slice(LibC::IoUringProbeOp).new(probe.value.ops.to_unsafe, LibC::IORING_OP_LAST)
+
+      # probe supported register opcodes (must test one by one)
+      sqe = LibC::IoUringSqe.new
+      sqe.opcode = LibC::IORING_OP_MSG_RING
+      sqe.fd = fd
+      ret = System::Syscall.io_uring_register(-1, LibC::IORING_REGISTER_SEND_MSG_RING, pointerof(sqe).as(Void*), 1)
+      @@supports_register_send_msg_ring = ret == 0
+
+      reg = LibC::IoUringSyncCancelReg.new
+      reg.flags = LibC::IORING_ASYNC_CANCEL_FD
+      reg.fd = 1
+      ret = System::Syscall.io_uring_register(fd, LibC::IORING_REGISTER_SYNC_CANCEL, pointerof(reg).as(Void*), 1)
+      @@supports_register_sync_cancel = ret != -LibC::ENOENT
     ensure
-      LibC.close(fd) # if fd > 0
+      LibC.close(fd)
     end
 
     true
@@ -53,6 +69,13 @@ class Crystal::System::IoUring
 
   def self.supports_feature?(feature : UInt32) : Bool
     (@@features.not_nil! & feature) == feature
+  end
+
+  def self.supports_register_send_msg_ring? : Bool
+    sqe = LibC::IoUringSqe.new
+    sqe.opcode = LibC::IORING_OP_MSG_RING
+    sqe.fd = waiting_ring.fd
+    ret = System::Syscall.io_uring_register(-1, LibC::IORING_REGISTER_SEND_MSG_RING, pointerof(sqe).as(Void*), 1)
   end
 
   def self.supports_opcode?(opcode : UInt32) : Bool
@@ -192,7 +215,6 @@ class Crystal::System::IoUring
     LibC.munmap(@sqes, @sqes_size)
 
     LibC.close(fd)
-    @eventfd.try(&.close)
   end
 
   def sq_poll? : Bool
@@ -204,17 +226,18 @@ class Crystal::System::IoUring
     (sq_flags & LibC::IORING_SQ_NEED_WAKEUP) == LibC::IORING_SQ_NEED_WAKEUP
   end
 
-  # Call `io_uring_register` syscall, and raises on errno.
+  # Call `io_uring_register` syscall. Raises on error.
   def register(opcode : UInt32, arg : Pointer | Nil = nil, arg_sz = 0) : Nil
-    argp = arg ? arg.as(Void*) : Pointer(Void).null
-    err = Syscall.io_uring_register(@fd, opcode, argp, arg_sz.to_u32)
-    raise RuntimeError.from_os_error("io_uring_register", Errno.new(-err)) if err < 0
+    if errno = register?(opcode, arg, arg_sz)
+      raise RuntimeError.from_os_error("io_uring_register", errno)
+    end
   end
 
-  # Register an `EventFD`.
-  def register(@eventfd : EventFD) : Nil
-    efd = eventfd.fd
-    register(LibC::IORING_REGISTER_EVENTFD, pointerof(efd), 1)
+  # Call `io_uring_register` syscall. Returns Errno on error.
+  def register?(opcode : UInt32, arg : Pointer | Nil = nil, arg_sz = 0) : Errno?
+    argp = arg ? arg.as(Void*) : Pointer(Void).null
+    err = Syscall.io_uring_register(@fd, opcode, argp, arg_sz.to_u32)
+    Errno.new(-err) if err < 0
   end
 
   # Makes sure there is at least *count* SQE available in the SQ ring so we can

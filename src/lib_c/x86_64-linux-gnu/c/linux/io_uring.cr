@@ -1,3 +1,5 @@
+require "../time"
+
 lib LibC
   # IORING_FILE_INDEX_ALLOC = ~0_u32
 
@@ -25,7 +27,8 @@ lib LibC
   # IORING_SETUP_DEFER_TASKRUN = 1_u32 << 13
   # IORING_SETUP_NO_MMAP = 	1_u32 << 14
   # IORING_SETUP_REGISTERED_FD_ONLY = 1_u32 << 15
-  IORING_SETUP_NO_SQARRAY = 1_u32 << 16
+  IORING_SETUP_NO_SQARRAY    = 1_u32 << 16
+  IORING_SETUP_HYBRID_IOPOLL = 1_u32 << 17
 
   # IORING_TIMEOUT_ABS = 1_u32 << 0
   # IORING_TIMEOUT_UPDATE = 1_u32 << 1
@@ -86,6 +89,7 @@ lib LibC
     futex_flags : UInt32
     install_fd_flags : UInt32
     nop_flags : UInt32
+    pipe_flags : UInt32
   end
 
   struct IoUringSqe
@@ -155,6 +159,16 @@ lib LibC
     ts : UInt64
   end
 
+  struct IoUringSyncCancelReg
+    addr : UInt64
+    fd : Int32
+    flags : UInt32
+    timeout : KernelTimespec
+    opcode : UInt8
+    pad : UInt8[7]
+    pad2 : UInt64[3]
+  end
+
   IORING_FEAT_SINGLE_MMAP     = 1_u32 << 0
   IORING_FEAT_NODROP          = 1_u32 << 1
   IORING_FEAT_SUBMIT_STABLE   = 1_u32 << 2
@@ -169,6 +183,10 @@ lib LibC
   IORING_FEAT_CQE_SKIP        = 1_u32 << 11
   IORING_FEAT_LINKED_FILE     = 1_u32 << 12
   IORING_FEAT_REG_REG_RING    = 1_u32 << 13
+  IORING_FEAT_RECVSEND_BUNDLE = 1_u32 << 14
+  IORING_FEAT_MIN_TIMEOUT     = 1_u32 << 15
+  IORING_FEAT_RW_ATTR         = 1_u32 << 16
+  IORING_FEAT_NO_IOWAIT       = 1_u32 << 17
 
   IORING_OP_NOP              =  0_u32
   IORING_OP_READV            =  1_u32
@@ -228,7 +246,12 @@ lib LibC
   IORING_OP_FTRUNCATE        = 55_u32
   IORING_OP_BIND             = 56_u32
   IORING_OP_LISTEN           = 57_u32
-  IORING_OP_LAST             = 58_u32
+  IORING_OP_RECV_ZC          = 59_u32
+  IORING_OP_EPOLL_WAIT       = 60_u32
+  IORING_OP_READV_FIXED      = 61_u32
+  IORING_OP_WRITEV_FIXED     = 62_u32
+  IORING_OP_PIPE             = 63_u32
+  IORING_OP_LAST             = 64_u32
 
   IORING_OFF_SQ_RING =          0_u64
   IORING_OFF_CQ_RING =  0x8000000_u64
@@ -266,7 +289,13 @@ lib LibC
   IORING_REGISTER_PBUF_STATUS         = 26_u32
   IORING_REGISTER_NAPI                = 27_u32
   IORING_UNREGISTER_NAPI              = 28_u32
-  IORING_REGISTER_LAST                = 29_u32
+  IORING_REGISTER_CLOCK               = 29_u32
+  IORING_REGISTER_CLONE_BUFFERS       = 30_u32
+  IORING_REGISTER_SEND_MSG_RING       = 31_u32
+  IORING_REGISTER_ZCRX_IFQ            = 32_u32
+  IORING_REGISTER_RESIZE_RINGS        = 33_u32
+  IORING_REGISTER_MEM_REGION          = 34_u32
+  IORING_REGISTER_LAST                = 35_u32
   IORING_REGISTER_USE_REGISTERED_RING = 1_u32 << 31
 
   IO_URING_OP_SUPPORTED = 1_u32

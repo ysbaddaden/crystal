@@ -4,12 +4,26 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   # Extends the system abstraction with additional data and helpers tailored
   # for the event loop implementation.
   class Ring < System::IoUring
-    # TODO: not needed after <https://github.com/crystal-lang/crystal/issues/16157>
-    @rng = Random::PCG32.new
-
-    @sq_lock = Thread::Mutex.new
-    @cq_lock = Thread::Mutex.new
     getter? waiting : Bool = false
+
+    def initialize
+      # TODO: not needed after <https://github.com/crystal-lang/crystal/issues/16157>
+      @rng = Random::PCG32.new
+
+      {% if flag?(:preview_mt) %}
+        # unless IORING_REGISTER_SYNC_CANCEL (Linux 6.0) and
+        # IORING_REGISTER_SEND_MSG_RING (Linux 6.13) are supported we may have
+        # multiple threads trying to submit to the ring (on evloop interrupt and
+        # before closing an IO::FileDescriptor)
+        unless System::IoUring.supports_register_sync_cancel? && System::IoUring.supports_register_send_msg_ring?
+          @sq_lock = Thread::Mutex.new
+        end
+      {% end %}
+
+      {% if flag?(:execution_context) %}
+        @cq_lock = Thread::Mutex.new
+      {% end %}
+    end
 
     def waiting(&)
       @waiting = true
@@ -18,13 +32,15 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       @waiting = false
     end
 
-    # Acquires the SQ lock for the duration of the block.
+    # Acquires the SQ lock for the duration of the block if required.
     def sq_lock(&)
-      {% if flag?(:execution_context) %}
-        @sq_lock.synchronize { yield }
-      {% else %}
-        yield
+      {% if flag?(:preview_mt) %}
+        if sq_lock = @sq_lock
+          return sq_lock.synchronize { yield }
+        end
       {% end %}
+
+      yield
     end
 
     # Acquires the CQ lock for the duration of the block.
