@@ -130,7 +130,7 @@ struct Crystal::FdLock
 
           # clear flags
           clear = xspin
-          clear |= xwaker unless waiter # no designated waker
+          clear |= xwaker unless waiter          # no designated waker
           clear |= xwait if waiters.value.empty? # no more waiters
           m = release_spinlock(clear)
 
