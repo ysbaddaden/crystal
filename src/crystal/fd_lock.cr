@@ -1,40 +1,168 @@
+# The general design is influenced by fdMutex in Go (LICENSE: BSD 3-Clause):
+# https://github.com/golang/go/blob/go1.25.1/src/internal/poll/fd_mutex.go
+#
+# The internal details (spinlock, long waiter, designated waker) of the locks
+# are heavily influenced by the nsync library (LICENSE: Apache-2.0):
+# https://github.com/google/nsync
+
 # :nodoc:
 #
-# Tracks active references over a system file descriptor (fd).
+# Tracks active references over a system file descriptor (fd) and serializes
+# reads and writes.
+#
+# Every read on the fd must lock read, every write must lock write and every
+# other operation (fcntl, setsockopt, ...) must acquire a shared lock. There can
+# be at most one reader + one writer + many references (other operations) at the
+# same time.
 #
 # The fdlock can be closed at any time, but the actual system close will wait
 # until there are no more references left. This avoids potential races when a
 # thread might try to read a fd that has been closed and has been reused by the
 # OS.
+#
+# Serializes reads and writes: only one attempt to read (or write) at a time can
+# go through, which avoids situations where 2 readers are waiting, then the
+# first reader is resumed but doesn't consume everything, then the second reader
+# will never be resumed. With this lock, a waiting reader will always be resumed.
 struct Crystal::FdLock
-  CLOSED = 1_u32      # the fdlock has been closed
-  REF    = 2_u32      # the ref counter increment
-  MASK   = ~(REF - 1) # mask for the ref counter
+  CLOSED = 1_u32 << 0 # the fdlock has been closed
+  RLOCK  = 1_u32 << 1 # reader lock
+  RWAIT  = 1_u32 << 2 # reader waiting (at least one waiting reader)
+  RSPIN  = 1_u32 << 3 # reader spinlock (protects @readers)
+  RWAKER = 1_u32 << 4 # reader designated waker
+  WLOCK  = 1_u32 << 5 # writer lock
+  WWAIT  = 1_u32 << 6 # writer waiting (at least one waiting writer)
+  WSPIN  = 1_u32 << 7 # writer spinlock (protects @writers)
+  WWAKER = 1_u32 << 8 # writer designated waker
+  REF    = 1_u32 << 9 # the reference counter increment
+  MASK   = ~(REF - 1) # mask for the reference counter
 
-  {% if flag?(:preview_mt) %}
-    @m = Atomic(UInt32).new(0_u32)
-    @closing : Fiber?
-  {% else %}
-    @closed = false
-  {% end %}
+  @m = Atomic(UInt32).new(0_u32)
+  @closing : Fiber?
+  @readers = PointerLinkedList(Fiber::PointerLinkedListNode).new
+  @writers = PointerLinkedList(Fiber::PointerLinkedListNode).new
+
+  # Locks for read and increments the references by one for the duration of the
+  # block. Raises if the fdlock is closed while trying to acquire the lock.
+  def read(& : -> F) : F forall F
+    m, success = @m.compare_and_set(0_u32, RLOCK + REF, :acquire, :relaxed)
+    lock_slow(RLOCK, RWAIT, RSPIN, RWAKER, pointerof(@readers)) unless success
+
+    begin
+      yield
+    ensure
+      m, success = @m.compare_and_set(RLOCK + REF, 0_u32, :release, :relaxed)
+      m = unlock_slow(RLOCK, RWAIT, RSPIN, RWAKER, pointerof(@readers)) unless success
+      handle_last_ref(m)
+    end
+  end
+
+  # Locks for write and increments the references by one for the duration of the
+  # block. Raises if the fdlock is closed while trying to acquire the lock.
+  def write(& : -> F) : F forall F
+    m, success = @m.compare_and_set(0_u32, WLOCK + REF, :acquire, :relaxed)
+    lock_slow(WLOCK, WWAIT, WSPIN, WWAKER, pointerof(@writers)) unless success
+
+    begin
+      yield
+    ensure
+      m, success = @m.compare_and_set(WLOCK + REF, 0_u32, :release, :relaxed)
+      m = unlock_slow(WLOCK, WWAIT, WSPIN, WWAKER, pointerof(@writers)) unless success
+      handle_last_ref(m)
+    end
+  end
+
+  @[NoInline]
+  private def lock_slow(xlock, xwait, xspin, xwaker, waiters)
+    waiter = Fiber::PointerLinkedListNode.new(Fiber.current)
+    attempts = 0
+    clear = 0_u32
+
+    while true
+      m = @m.get(:relaxed)
+
+      if (m & CLOSED) == CLOSED
+        raise IO::Error.new("Closed")
+      elsif (m & xlock) == 0_u32
+        # acquire the lock + increment ref
+        m, success = @m.compare_and_set(m, ((m | xlock) + REF) & ~clear, :acquire, :relaxed)
+        return if success
+      elsif (m & xspin) == 0_u32
+        # acquire spinlock + declare waiter
+        m, success = @m.compare_and_set(m, (m | xspin | xwait) & ~clear, :acquire, :relaxed)
+        if success
+          waiters.value.push(pointerof(waiter))
+          release_spinlock(clear: xspin)
+
+          Fiber.suspend
+
+          # the designated waker has woken: must clear the bit
+          clear |= xwaker
+        end
+      end
+
+      attempts = Thread.delay(attempts)
+    end
+  end
+
+  @[NoInline]
+  private def unlock_slow(xlock, xwait, xspin, xwaker, waiters)
+    attempts = 0
+
+    while true
+      m = @m.get(:relaxed)
+
+      if (m & CLOSED) == CLOSED
+        # decrement ref and abort
+        m = @m.sub(REF)
+        return m
+      elsif (m & xwait) == 0_u32 || (m & xwaker) != 0_u32
+        # no waiter, or there is a designated waker (no need to wake another
+        # one): unlock & decrement ref
+        m, success = @m.compare_and_set(m, (m & ~xlock) - REF, :release, :relaxed)
+        return m if success
+      elsif (m & xspin) == 0_u32
+        # there is a waiter and no designated waker: acquire spinlock (and
+        # declare a designated waker) + release lock & decrement ref early
+        m, success = @m.compare_and_set(m, ((m | xspin | xwaker) & ~xlock) - REF, :acquire_release, :relaxed)
+        if success
+          waiter = waiters.value.shift?
+
+          # clear flags
+          clear = xspin
+          clear |= xwaker unless waiter # no designated waker
+          clear |= xwait if waiters.value.empty? # no more waiters
+          m = release_spinlock(clear)
+
+          waiter.value.enqueue if waiter
+          return m
+        end
+      end
+
+      attempts = Thread.delay(attempts)
+    end
+  end
+
+  private def release_spinlock(clear)
+    m = @m.get(:relaxed)
+    while true
+      m, success = @m.compare_and_set(m, m & ~clear, :release, :relaxed)
+      return m if success
+    end
+  end
 
   # Borrows a reference for the duration of the block. Raises if the fdlock is
   # closed while trying to borrow.
   def reference(& : -> F) : F forall F
-    {% if flag?(:preview_mt) %}
-      m, success = @m.compare_and_set(0_u32, REF, :acquire, :relaxed)
-      increment_slow(m) unless success
+    m, success = @m.compare_and_set(0_u32, REF, :acquire, :relaxed)
+    increment_slow(m) unless success
 
-      begin
-        yield
-      ensure
-        m = @m.sub(REF, :release)
-        handle_last_ref(m)
-      end
-    {% else %}
-      raise IO::Error.new("Closed") if @closed
+    begin
       yield
-    {% end %}
+    ensure
+      m = @m.sub(REF, :release)
+      handle_last_ref(m)
+    end
   end
 
   private def increment_slow(m)
@@ -55,70 +183,70 @@ struct Crystal::FdLock
     @closing.not_nil!("BUG: expected a closing fiber to resume.").enqueue
   end
 
-  # Closes the fdlock. Blocks for as long as there are references.
+  # Closes the fdlock. Wakes waiting readers and writers. Blocks for as long as
+  # there are references.
   #
-  # Returns true if the fdlock has been closed: no fiber can acquire a reference
-  # anymore, the calling fiber fully owns the fd and can safely close it.
+  # The *callback* block must cancel any external waiters (e.g. pending evloop
+  # read or write).
+  #
+  # Returns true if the fdlock has been closed: no fiber can lock for read,
+  # write or acquire a reference anymore, the calling fiber fully owns the fd
+  # and can safely close it.
   #
   # Returns false if the fdlock has already been closed: the calling fiber
   # doesn't own the fd and musn't close it (there might still be active
   # references).
-  def try_close?(&before_close : ->) : Bool
-    {% if flag?(:preview_mt) %}
+  def try_close?(&callback : ->) : Bool
+    attempts = 0
+
+    # close + increment ref + acquire both spinlocks so we own both @readers and
+    # @writers; parallel attempts to acquire a spinlock will fail, notice that
+    # the lock is closed, and abort
+    while true
       m = @m.get(:relaxed)
 
-      # increment ref and close (abort if already closed)
-      while true
-        if (m & CLOSED) == CLOSED
-          return false
-        end
-        m, success = @m.compare_and_set(m, (m + REF) | CLOSED, :acquire, :relaxed)
-        break if success
+      if (m & CLOSED) == CLOSED
+        # already closed: abort
+        return false
       end
 
-      # set the current fiber as the closing fiber (to be resumed by the last ref)
-      # then decrement ref
-      @closing = Fiber.current
-      m = @m.sub(REF, :release)
+      m, success = @m.compare_and_set(m, (m + REF) | CLOSED | RSPIN | WSPIN, :acquire, :relaxed)
+      break if success
 
-      begin
-        # before close callback
-        yield
-      ensure
-        # wait for the last ref... unless we're the last ref!
-        Fiber.suspend unless (m & MASK) == REF
-      end
+      attempts = Thread.delay(attempts)
+    end
 
-      @closing = nil
-      true
-    {% else %}
-      if @closed
-        false
-      else
-        @closed = true
-        yield
-        true
-      end
-    {% end %}
+    # set the current fiber as the closing fiber (to be resumed by the last ref)
+    @closing = Fiber.current
+
+    # resume waiters so they can fail (it's closed); this is safe because we
+    # acquired the spinlocks:
+    @readers.consume_each(&.value.enqueue)
+    @writers.consume_each(&.value.enqueue)
+
+    # decrement the last ref
+    m = @m.sub(REF, :release)
+
+    begin
+      yield
+    ensure
+      # wait for the last ref... unless we're the last ref!
+      Fiber.suspend unless (m & MASK) == REF
+    end
+
+    @closing = nil
+    true
   end
 
   # Resets the fdlock back to its pristine state so it can be used again.
   # Assumes the caller owns the fdlock. This is required by
   # `TCPSocket#initialize`.
   def reset : Nil
-    {% if flag?(:preview_mt) %}
-      @m.lazy_set(0_u32)
-      @closing = nil
-    {% else %}
-      @closed = false
-    {% end %}
+    @m.lazy_set(0_u32)
+    @closing = nil
   end
 
   def closed? : Bool
-    {% if flag?(:preview_mt) %}
-      (@m.get(:relaxed) & CLOSED) == CLOSED
-    {% else %}
-      @closed
-    {% end %}
+    (@m.get(:relaxed) & CLOSED) == CLOSED
   end
 end
