@@ -44,6 +44,8 @@ lib LibC
   fun symlink(x0 : Char*, x1 : Char*) : Int
   fun readlink(path : Char*, buf : Char*, size : SizeT) : SSizeT
   fun sysconf(x0 : Int) : Long
+  fun umtx_sleep(Int*, Int, Int)
+  fun umtx_wakeup(Int*, Int)
   fun unlink(x0 : Char*) : Int
   fun write(x0 : Int, x1 : Void*, x2 : SizeT) : SSizeT
 end

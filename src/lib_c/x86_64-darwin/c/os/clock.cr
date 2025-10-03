@@ -1,0 +1,3 @@
+lib LibC
+  OS_CLOCK_MACH_ABSOLUTE_TIME = 32
+end

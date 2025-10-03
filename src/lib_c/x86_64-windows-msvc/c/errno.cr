@@ -51,6 +51,7 @@ lib LibC
   EISCONN      = 113
   ELOOP        = 114
   ENOPROTOOPT  = 123
+  ETIMEDOUT    = 138
 
   alias ErrnoT = Int
 end
