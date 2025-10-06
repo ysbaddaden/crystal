@@ -17,7 +17,10 @@ class Thread
   end
 end
 
-{% if flag?(:wasi) %}
+{% if flag?(:preview_custom_thread_mutex) %}
+  require "crystal/system/futex"
+  require "../thread/mutex"
+{% elsif flag?(:wasi) %}
   require "./wasi/thread_mutex"
 {% elsif flag?(:unix) %}
   require "./unix/pthread_mutex"
