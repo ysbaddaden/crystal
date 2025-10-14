@@ -181,10 +181,13 @@ class Crystal::EventLoop::LibEvent < Crystal::EventLoop
     file_descriptor.evented_close
   end
 
-  def close(file_descriptor : Crystal::System::FileDescriptor) : Nil
+  def before_close(file_descriptor : Crystal::System::FileDescriptor) : Nil
     # perform cleanup before LibC.close. Using a file descriptor after it has
     # been closed is never defined and can always lead to undefined results
     file_descriptor.evented_close
+  end
+
+  def close(file_descriptor : Crystal::System::FileDescriptor) : Nil
     file_descriptor.file_descriptor_close
   end
 
@@ -302,10 +305,13 @@ class Crystal::EventLoop::LibEvent < Crystal::EventLoop
     end
   end
 
-  def close(socket : ::Socket) : Nil
+  def before_close(socket : ::Socket) : Nil
     # perform cleanup before LibC.close. Using a file descriptor after it has
     # been closed is never defined and can always lead to undefined results
     socket.evented_close
+  end
+
+  def close(socket : ::Socket) : Nil
     socket.socket_close
   end
 
