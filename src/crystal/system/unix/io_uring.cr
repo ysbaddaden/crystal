@@ -71,13 +71,6 @@ class Crystal::System::IoUring
     (@@features.not_nil! & feature) == feature
   end
 
-  def self.supports_register_send_msg_ring? : Bool
-    sqe = LibC::IoUringSqe.new
-    sqe.opcode = LibC::IORING_OP_MSG_RING
-    sqe.fd = waiting_ring.fd
-    ret = System::Syscall.io_uring_register(-1, LibC::IORING_REGISTER_SEND_MSG_RING, pointerof(sqe).as(Void*), 1)
-  end
-
   def self.supports_opcode?(opcode : UInt32) : Bool
     (@@opcodes.not_nil![opcode].flags & LibC::IO_URING_OP_SUPPORTED) == LibC::IO_URING_OP_SUPPORTED
   end

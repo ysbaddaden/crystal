@@ -59,11 +59,6 @@ abstract class Crystal::EventLoop
   end
 
   {% if flag?(:execution_context) %}
-    # Called whenever the parallelism of the `Fiber::ExecutionContext` is
-    # changed (i.e. when a parallel context is resized).
-    def on_parallelism_change(parallelism : Int32)
-    end
-
     # Called once before *scheduler* is started. Optional hook.
     def register(scheduler : Fiber::ExecutionContext::Scheduler, index : Int32) : Nil
     end

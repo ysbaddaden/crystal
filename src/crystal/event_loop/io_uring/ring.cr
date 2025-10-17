@@ -6,7 +6,19 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   class Ring < System::IoUring
     getter? waiting : Bool = false
 
-    def initialize
+    {% if flag?(:preview_mt) %}
+      @sq_lock : Thread::Mutex?
+    {% end %}
+
+    {% if flag?(:execution_context) %}
+      # uninitialized-safety: compiler fails to notice the actual initialization
+      # because of comptime flags
+      @cq_lock = uninitialized Thread::Mutex
+    {% end %}
+
+    def initialize(*args, **kwargs)
+      super(*args, **kwargs)
+
       # TODO: not needed after <https://github.com/crystal-lang/crystal/issues/16157>
       @rng = Random::PCG32.new
 
@@ -81,7 +93,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
 
     # Locks the SQ ring, reserves as many SQE as needed to fill *sqes* and
     # submits before returning.
-    def submit(sqes, &)
+    def submit(sqes : Slice(LibC::IoUringSqe*), &)
       sq_lock do
         reserve(sqes.size)
 

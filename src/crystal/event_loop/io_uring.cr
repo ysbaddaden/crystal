@@ -1,5 +1,36 @@
-# forward declaration for the require below to not create a module
+# The IO URING event loop.
+#
+# Only available on Linux targets and requires a recent kernel, at least Linux
+# 5.19+ while we recommend Linux 6.13+ (see below).
+#
+# Executing an operation follows the regular async design: submit the operation
+# to the local ring, suspend the fiber, wait for the operation to complete. When
+# the CQE is received the fiber will be resumed.
+#
+# Thread Safety
+#
+# While IO URING is thread safe in the kernel, the SQ and CQ rings aren't thread
+# safe (by design) so each scheduler has its own ring. A main ring is created
+# when the evloop is created (always used by the first scheduler), then a local
+# ring is created and attached for additional schedulers. The local rings share
+# the kernel resources of the main ring (WQ).
+#
+# On Linux kernels lower then 6.13 (determined at runtime) each SQ ring is
+# protected by a lock because some operations still need to submit to the ring
+# of another scheduler (e.g. to interrupt or to cancel pending R/W ops on
+# IO::FileDescriptor before close). Linux 6.13+ kernels provide
+# IORING_OP_MSG_RING and IORING_REGISTER_SYNC_CANCEL that make the lock
+# pointless.
+#
+# CQ rings are always protected by a lock. Running the evloop usually checks the
+# local CQEs, but once in a while and for blocking runs it checks the CQEs from
+# all the rings (hence the lock requirement), so a scheduler blocked on a CPU
+# bound fiber doesn't block runnable fibers for too long, especially when
+# there's a starving scheduler.
+#
+#
 class Crystal::EventLoop::IoUring < Crystal::EventLoop
+  # ^-- forward declaration for the require below to not create a module
 end
 
 require "c/poll"
@@ -8,6 +39,14 @@ require "./io_uring/*"
 require "./timers"
 
 {% if flag?(:execution_context) %}
+  # Each scheduler has its own ring, so we can avoid mutexes around the
+  # submission queue for example (Linux 6.13+) and otherwise try to make sure
+  # the lock is only slightly contented.
+  #
+  # OPTIMIZE: use a @[ThreadLocal] that would be set when a scheduler is
+  # resumed on a thread, and unset when the scheduler detaches itself from
+  # the thread.
+
   class Fiber
     module ExecutionContext
       module Scheduler
@@ -29,7 +68,44 @@ require "./timers"
   end
 {% end %}
 
-# NOTE: IOSQE_CQE_SKIP_SUCCESS is incompatible with IOSQE_IO_DRAIN!
+{% if flag?(:preview_mt) %}
+  # We must cancel pending R/W operations before we close the fd:
+  #
+  # 1. Closing a fd won't interrupt pending reads and writes in the linux
+  # kernel, so fibers waiting to read or write would get stuck forever.
+  #
+  # 2. We must resume the fibers pending to decrement the fdlock reference,
+  # otherwise the fd would never get closed.
+  #
+  # Thanks to the read fdlock we can only have at most one reader and one writer
+  # at any time, so we only have a couple rings to remember, and put 'em on the
+  # IO objects directly.
+
+  module Crystal::System::FileDescriptor
+    @__evloop_reader = Atomic(Crystal::EventLoop::IoUring::Ring?).new(nil)
+    @__evloop_writer = Atomic(Crystal::EventLoop::IoUring::Ring?).new(nil)
+
+    # :nodoc:
+    def __evloop_reader?
+      @__evloop_reader.swap(nil, :relaxed)
+    end
+
+    # :nodoc:
+    def __evloop_reader=(value)
+      @__evloop_reader.set(value)
+    end
+
+    # :nodoc:
+    def __evloop_writer?
+      @__evloop_writer.swap(nil, :relaxed)
+    end
+
+    # :nodoc:
+    def __evloop_writer=(value)
+      @__evloop_writer.set(value)
+    end
+  end
+{% end %}
 
 class Crystal::EventLoop::IoUring < Crystal::EventLoop
   def self.default_file_blocking?
@@ -41,15 +117,15 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   end
 
   # While io_uring was introduced in Linux 5.1, some features and opcodes that
-  # we require are only available in Linux 5.18. The event loop is thus
-  # incompatible with:
-  #
-  # FIXME: while IORING_OP_ASYNC_CANCEL was introduced in Linux 5.5, the
-  # IORING_ASYNC_CANCEL_FD flag was only introduced in Linux 5.19.
+  # we require are only available in Linux 5.18 (IORING_OP_MSG_RING). The event
+  # loop is thus incompatible with:
   #
   # - Linux 5.4 LTS (EOL Dec 2025)
   # - Linux 5.10 SLTS (EOL Jan 2031)
   # - Linux 5.15 LTS (EOL Dec 2026)
+  #
+  # FIXME: while IORING_OP_ASYNC_CANCEL was introduced in Linux 5.5, the
+  # IORING_ASYNC_CANCEL_FD flag was only introduced in Linux 5.19.
   def self.supported? : Bool
     return false unless System::IoUring.supported?
 
@@ -77,7 +153,8 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   DEFAULT_CQ_ENTRIES     = 128
   DEFAULT_SQ_THREAD_IDLE = nil # 200 (in milliseconds)
 
-  CLOSE_RING_EVENT = GC.malloc(sizeof(Event)).as(Event*)
+  # uninitialized-safety: never used, we only need the unique pointer
+  @@close_ring_event = uninitialized Event
 
   # SQPOLL without fixed files was added in Linux 5.11 with CAP_SYS_NICE
   # privilege and Linux 5.13 unprivileged.
@@ -144,8 +221,8 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     # The rings array might become full after some resizes (e.g. resize up, or a
     # resize down followed by a resize up while the rings haven't been closed,
     # yet), in which case we manually dup and grow the array so it's internal
-    # buffer is never reallocated (invalidating the old pointer) so a full
-    # evloop run can safely iterate the rings array without locking the mutex.
+    # buffer is never reallocated, so a full evloop run can safely iterate the
+    # rings array without locking the mutex.
     def register(scheduler : Fiber::ExecutionContext::Scheduler, index : Int32) : Nil
       if index == 0
         # the first scheduler always uses the main ring
@@ -187,7 +264,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       ring.submit do |sqe|
         sqe.value.opcode = LibC::IORING_OP_NOP
         sqe.value.flags = LibC::IOSQE_IO_DRAIN
-        sqe.value.user_data = CLOSE_RING_EVENT.address.to_u64!
+        sqe.value.user_data = pointerof(@@close_ring_event).address.to_u64!
       end
     end
   {% end %}
@@ -240,6 +317,9 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     @tick.add(1, :relaxed) == 51
   end
 
+  # OPTIMIZE: adjust the MAX_PROCESS_ALL amount (arbitrary)
+  MAX_PROCESS_ALL = 128
+
   private def process_all(rings, i, &)
     enqueued = 0
 
@@ -247,14 +327,14 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       next unless ring = rings[(i + j) % rings.size]
 
       # try to lock the CQ ring, abort if already locked (another thread is
-      # processing it)
+      # already processing it)
       ring.cq_trylock? do
         process_cqes(ring) do |fiber|
           yield fiber
 
           # abort when an arbitrary amount of events has been processed so we
           # don't block the current thread for longer than necessary
-          return enqueued if (enqueued += 1) >= 128
+          return enqueued if (enqueued += 1) >= MAX_PROCESS_ALL
         end
       end
     end
@@ -289,15 +369,13 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
 
       process_cqes(ring) { |fiber| yield fiber }
     end
-
-    return false
   end
 
   # Determines the relative timeout until the next ready timer.
   #
-  # There is a race condition when a parallel thread adds a timer that would
-  # resume earlier, but that thread will eventually wait on its own ring and
-  # resume earlier.
+  # There is a race condition when a parallel scheduler adds a timer that would
+  # resume earlier, but that scheduler will eventually wait on its own ring,
+  # notice the new timeout, and resume on time.
   private def wait_until(blocking)
     min_complete, timeout = 0, nil
 
@@ -326,12 +404,11 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       case event = Pointer(Event).new(cqe.value.user_data)
       when Pointer(Event).null
         # skip CQE without an Event
-      when CLOSE_RING_EVENT
+      when pointerof(@@close_ring_event)
         {% if flag?(:execution_context) %}
           @mutex.synchronize do
-            # a nilable reference is basically a null pointer (non mixed union):
-            # we can safely nillify the value (single write) which is thread safe,
-            # otherwise we'd have to dup the array
+            # thread safety: a nilable reference is a null pointer (non mixed
+            # union): we can safely clear the value with a single store
             if index = @rings.index(ring)
               @rings[index] = nil
             end
@@ -348,8 +425,10 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   end
 
   private def process_timers(&)
+    # can race, but the other thread that enqueued shall notice
     return if @timers.empty?
 
+    # first, dequeue some timers
     timers = uninitialized Pointer(Event)[32]
     count = 0
 
@@ -361,6 +440,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       end
     end
 
+    # after releasing the lock, we can process the timers
     timers.to_slice[0, count].each do |event|
       fiber = event.value.fiber
 
@@ -377,11 +457,19 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
 
   def interrupt : Nil
     # search a waiting ring to wakeup
-    return unless waiting_ring = @rings.find(&.try(&.waiting?))
+    waiting_ring =
+      {% if flag?(:execution_context) %}
+        @rings.find(&.try(&.waiting?))
+      {% elsif flag?(:preview_mt) %}
+        @main_ring
+      {% else %}
+        nil
+      {% end %}
+    return unless waiting_ring
 
     # try to notify the waiting ring through the local ring (every scheduler
-    # should have one), fallback to a syscall (Linux 6.13) or to a cross ring
-    # submit for older kernels
+    # should have one) but there might be bare threads, so we fallback to a
+    # syscall (Linux 6.13) or to a cross ring submit for older kernels
     ring = ring?
     ring = waiting_ring if ring.nil? && !System::IoUring.supports_register_send_msg_ring?
 
@@ -394,8 +482,8 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       sqe = LibC::IoUringSqe.new
       sqe.opcode = LibC::IORING_OP_MSG_RING
       sqe.fd = waiting_ring.fd
-      ret = System::Syscall.io_uring_register(-1, LibC::IORING_REGISTER_SEND_MSG_RING, pointerof(sqe).as(Void*), 1)
-      raise RuntimeError.from_os_error("io_uring_register(IORING_REGISTER_SEND_MSG_RING)", Errno.new(-ret)) if ret < 0
+      res = System::Syscall.io_uring_register(-1, LibC::IORING_REGISTER_SEND_MSG_RING, pointerof(sqe).as(Void*), 1)
+      raise RuntimeError.from_os_error("io_uring_register(IORING_REGISTER_SEND_MSG_RING)", Errno.new(-res)) if res < 0
     end
   end
 
@@ -457,7 +545,19 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   end
 
   def read(file_descriptor : System::FileDescriptor, slice : Bytes) : Int32
-    async_rw(LibC::IORING_OP_READ, file_descriptor, slice, file_descriptor.@read_timeout) do |errno|
+    before_suspend =
+      {% if flag?(:preview_mt) %}
+        file_descriptor.__evloop_reader = ring
+        -> {
+          if file_descriptor.closed? && file_descriptor.__evloop_reader?
+            cancel(file_descriptor.fd)
+          end
+        }
+      {% else %}
+        nil
+      {% end %}
+
+    async_rw(LibC::IORING_OP_READ, file_descriptor, slice, file_descriptor.@read_timeout, before_suspend) do |errno|
       case errno
       when Errno::ECANCELED
         raise IO::TimeoutError.new("Read timed out")
@@ -467,6 +567,10 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
         raise IO::Error.from_os_error("read", errno, target: file_descriptor)
       end
     end
+  ensure
+    {% if flag?(:preview_mt) %}
+      file_descriptor.__evloop_reader = nil
+    {% end %}
   end
 
   def wait_readable(file_descriptor : System::FileDescriptor) : Nil
@@ -474,7 +578,19 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   end
 
   def write(file_descriptor : System::FileDescriptor, slice : Bytes) : Int32
-    async_rw(LibC::IORING_OP_WRITE, file_descriptor, slice, file_descriptor.@write_timeout) do |errno|
+    before_suspend =
+      {% if flag?(:preview_mt) %}
+        file_descriptor.__evloop_writer = ring
+        -> {
+          if file_descriptor.closed? && file_descriptor.__evloop_writer?
+            cancel(file_descriptor.fd)
+          end
+        }
+      {% else %}
+         nil
+      {% end %}
+
+    async_rw(LibC::IORING_OP_WRITE, file_descriptor, slice, file_descriptor.@write_timeout, before_suspend) do |errno|
       case errno
       when Errno::ECANCELED
         raise IO::TimeoutError.new("Write timed out")
@@ -484,6 +600,10 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
         raise IO::Error.from_os_error("write", errno, target: file_descriptor)
       end
     end
+  ensure
+    {% if flag?(:preview_mt) %}
+      file_descriptor.__evloop_writer = nil
+    {% end %}
   end
 
   def wait_writable(file_descriptor : System::FileDescriptor) : Nil
@@ -494,33 +614,26 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     # nothing to do
   end
 
+  def before_close(file_descriptor : System::FileDescriptor) : Nil
+    {% if flag?(:preview_mt) %}
+      if reader_ring = file_descriptor.__evloop_reader?
+        cancel(file_descriptor.fd, ring: reader_ring)
+      end
+      if (writer_ring = file_descriptor.__evloop_writer?) && (writer_ring != reader_ring)
+        cancel(file_descriptor.fd, ring: writer_ring)
+      end
+    {% else %}
+      ring.submit do |sqe|
+        sqe.value.opcode = LibC::IORING_OP_ASYNC_CANCEL
+        sqe.value.fd = file_descriptor.fd
+        sqe.value.sflags.cancel_flags = LibC::IORING_ASYNC_CANCEL_FD | LibC::IORING_ASYNC_CANCEL_ALL
+      end
+    {% end %}
+  end
+
   def close(file_descriptor : System::FileDescriptor) : Nil
-    # sync with `FileDescriptor#file_descriptor_close`: prevent actual close
-    return unless fd = file_descriptor.close_volatile_fd?
-
-    # FIXME: we must submit an IORING_OP_ASYNC_CANCEL to every ring (across
-    # execution contexts) that has a pending IORING_OP_READ or IORING_OP_WRITE
-    # operation on the IO::FileDescriptor; we can't just link CANCEL to CLOSE on
-    # the local ring (requires SQ lock so any thread can submit to the ring).
-    #
-    # NOTE: IORING_OP_POLL_ADD operations don't need to be canceled (POLLERR
-    # and/or POLLHUP / POLLRDHUP are enough).
-    #
-    # TODO: consider IORING_REGISTER_SYNC_CANCEL (Linux 6.0) that is synchronous
-    # (bad) but allows to target any ring safely and to skip the SQ lock for
-    # _every_ operation (good).
-    #
-    # OPTIMIZE: if the pending ops are on this ring (lucky) we can keep
-    # submitting an IORING_OP_ASYNC_CANCEL linked to an IORING_OP_CLOSE.
-
-    async_close(fd) do |sqe|
-      # one thread closing a fd won't interrupt reads or writes happening in
-      # other threads, for example a blocked read on a fifo will keep blocking,
-      # while close would have finished and closed the fd; we thus explicitly
-      # cancel any pending operations on the fd before we try to close
-      sqe.value.opcode = LibC::IORING_OP_ASYNC_CANCEL
-      sqe.value.sflags.cancel_flags = LibC::IORING_ASYNC_CANCEL_FD
-      sqe.value.fd = fd
+    if fd = file_descriptor.close_volatile_fd?
+      async_close(fd)
     end
   end
 
@@ -568,16 +681,17 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   end
 
   def accept(socket : ::Socket) : {::Socket::Handle, Bool}?
-    ret = async(LibC::IORING_OP_ACCEPT, socket.@read_timeout) do |sqe|
+    res = async(LibC::IORING_OP_ACCEPT, socket.@read_timeout) do |sqe|
       sqe.value.fd = socket.fd
       sqe.value.sflags.accept_flags = LibC::SOCK_CLOEXEC
     end
-    return {ret, true} unless ret < 0
+    return {res, true} unless res < 0
 
-    if ret == -LibC::ECANCELED
+    errno = Errno.new(-res)
+    if errno == Errno::ECANCELED
       raise IO::TimeoutError.new("Accept timed out")
     elsif !socket.closed?
-      raise ::Socket::Error.from_os_error("accept", Errno.new(-ret))
+      raise ::Socket::Error.from_os_error("accept", errno)
     end
   end
 
@@ -585,17 +699,18 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     sockaddr = address.to_unsafe # OPTIMIZE: #to_unsafe allocates (not needed)
     addrlen = address.size
 
-    ret = async(LibC::IORING_OP_CONNECT, timeout) do |sqe|
+    res = async(LibC::IORING_OP_CONNECT, timeout) do |sqe|
       sqe.value.fd = socket.fd
       sqe.value.addr = sockaddr.address.to_u64!
       sqe.value.u1.off = addrlen.to_u64!
     end
-    return if ret == 0
+    return if res == 0
 
-    if ret == -LibC::ECANCELED
+    errno = Errno.new(-res)
+    if errno == Errno::ECANCELED
       IO::TimeoutError.new("Connect timed out")
-    elsif ret != -LibC::EISCONN
-      ::Socket::ConnectError.from_os_error("connect", Errno.new(-ret))
+    elsif errno != Errno::EISCONN
+      ::Socket::ConnectError.from_os_error("connect", errno)
     end
   end
 
@@ -645,16 +760,20 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     {res, ::Socket::Address.from(pointerof(sockaddr).as(LibC::Sockaddr*), msghdr.msg_namelen)}
   end
 
+  def before_close(socket : ::Socket) : Nil
+    # unlike IO::FileDescriptor, we can merely shut down the socket to interrupt
+    # pending operations (read, write, accept, ...)
+    ring.submit do |sqe|
+      sqe.value.opcode = IORING_OP_SHUTDOWN
+      sqe.value.fd = file_descriptor.fd
+      sqe.value.len = LibC::SHUT_RDWR
+    end
+  end
+
   def close(socket : ::Socket) : Nil
     # sync with `Socket#socket_close`
-    return unless fd = socket.close_volatile_fd?
-
-    # we must shutdown a socket before closing it, otherwise a pending accept
-    # or read won't be interrupted for example;
-    async_close(fd) do |sqe|
-      sqe.value.opcode = LibC::IORING_OP_SHUTDOWN
-      sqe.value.fd = fd
-      sqe.value.len = LibC::SHUT_RDWR
+    if fd = socket.close_volatile_fd?
+      async_close(fd)
     end
   end
 
@@ -664,9 +783,37 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     raise IO::Error.new("Closed stream") if io.closed?
   end
 
-  private def async_rw(opcode, io, slice, timeout, &)
+  private def cancel(fd, ring = self.ring)
+    if (ring == self.ring) || !System::IoUring.supports_register_sync_cancel?
+      # submit to local ring, or to another ring for legacy kernels
+      ring.submit do |sqe|
+        sqe.value.opcode = LibC::IORING_OP_ASYNC_CANCEL
+        sqe.value.fd = fd
+        sqe.value.sflags.cancel_flags = LibC::IORING_ASYNC_CANCEL_FD | LibC::IORING_ASYNC_CANCEL_ALL
+      end
+    else
+      # use sync cancel for modern kernels to notify another ring but don't wait
+      # for the cancelation to have completed by using a zero timeout so it
+      # behaves as an async cancel (see https://github.com/axboe/liburing/discussions/608)
+      reg = LibC::IoUringSyncCancelReg.new
+      reg.fd = fd
+      reg.flags = LibC::IORING_ASYNC_CANCEL_FD | LibC::IORING_ASYNC_CANCEL_ALL
+      reg.timeout.tv_sec = 0
+      reg.timeout.tv_nsec = 0
+
+      res = System::Syscall.io_uring_register(ring.fd, LibC::IORING_REGISTER_SYNC_CANCEL, pointerof(reg).as(Void*), 1_u32)
+      return unless res < 0
+
+      errno = Errno.new(-res)
+      return if errno.in?(Errno::ENOENT, Errno::EALREADY, Errno::ETIME)
+
+      raise RuntimeError.from_os_error("io_uring_register(IORING_REGISTER_SYNC_CANCEL)", errno)
+    end
+  end
+
+  private def async_rw(opcode, io, slice, timeout, before_suspend = nil, &)
     loop do
-      res = async(opcode, timeout) do |sqe|
+      res = async(opcode, timeout, before_suspend) do |sqe|
         sqe.value.fd = io.fd
         sqe.value.u1.off = -1
         sqe.value.addr = slice.to_unsafe.address.to_u64!
@@ -675,7 +822,9 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       return res if res >= 0
 
       check_open(io)
-      yield Errno.new(-res) unless res == -LibC::EINTR
+
+      errno = Errno.new(-res)
+      yield errno unless errno == Errno::EINTR
     end
   end
 
@@ -688,42 +837,26 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     raise IO::TimeoutError.new(yield) if res == -LibC::ECANCELED
   end
 
-  private def async_close(fd, &)
-    sqes = uninitialized Pointer(LibC::IoUringSqe)[2]
-
-    res = async_impl do |event|
-      ring.submit(sqes.to_slice) do
-        # linux won't interrupt pending operations on a file descriptor when it
-        # closes it, we thus first create an operation to cancel any pending
-        # operations; we don't attach that cancel operation to an event: handling
-        # the CQE for close is enough
-        sqes[0].value.flags = LibC::IOSQE_IO_LINK | LibC::IOSQE_IO_HARDLINK
-        yield sqes[0]
-
-        # then we setup the close operation
-        sqes[1].value.opcode = LibC::IORING_OP_CLOSE
-        sqes[1].value.user_data = event.address.to_u64!
-        sqes[1].value.fd = fd
-      end
+  private def async_close(fd)
+    res = async(LibC::IORING_OP_CLOSE) do |sqe|
+      sqe.value.fd = fd
     end
+    return if res == 0
 
-    case res
-    when 0
-      # success
-    when -LibC::EINTR, -LibC::EINPROGRESS
-      # ignore
-    else
-      raise IO::Error.from_os_error("Error closing file", Errno.new(-res))
-    end
+    errno = Errno.new(-res)
+    return if errno.in?(Errno::EINTR, Errno::EINPROGRESS)
+
+    raise IO::Error.from_os_error("Error closing file", errno)
   end
 
-  private def async(opcode, link_timeout = nil, &)
+  private def async(opcode, link_timeout = nil, before_suspend = nil, &)
     sqes = uninitialized Pointer(LibC::IoUringSqe)[2]
 
     async_impl do |event|
       count = link_timeout ? 2 : 1
 
       ring.submit(sqes.to_slice[0, count]) do
+        sqes[0].clear
         sqes[0].value.opcode = opcode
         sqes[0].value.user_data = event.address.to_u64!
         yield sqes[0]
@@ -735,11 +868,14 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
           sqes[0].value.flags = sqes[0].value.flags | LibC::IOSQE_IO_LINK
 
           # configure the timeout operation
+          sqes[1].clear
           sqes[1].value.opcode = LibC::IORING_OP_LINK_TIMEOUT
           sqes[1].value.addr = event.value.timespec.address.to_u64!
           sqes[1].value.len = 1
         end
       end
+
+      before_suspend.try(&.call)
     end
   end
 

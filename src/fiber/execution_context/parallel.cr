@@ -238,9 +238,6 @@ module Fiber::ExecutionContext
           @condition.broadcast
           @event_loop.interrupt
         end
-
-        # notify the event-loop before releasing the mutex
-        @event_loop.on_parallelism_change(new_capacity)
       end
 
       return unless removed_schedulers
