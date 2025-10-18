@@ -764,8 +764,8 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     # unlike IO::FileDescriptor, we can merely shut down the socket to interrupt
     # pending operations (read, write, accept, ...)
     ring.submit do |sqe|
-      sqe.value.opcode = IORING_OP_SHUTDOWN
-      sqe.value.fd = file_descriptor.fd
+      sqe.value.opcode = LibC::IORING_OP_SHUTDOWN
+      sqe.value.fd = socket.fd
       sqe.value.len = LibC::SHUT_RDWR
     end
   end
