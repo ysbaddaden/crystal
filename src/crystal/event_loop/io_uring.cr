@@ -856,7 +856,6 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       count = link_timeout ? 2 : 1
 
       ring.submit(sqes.to_slice[0, count]) do
-        sqes[0].clear
         sqes[0].value.opcode = opcode
         sqes[0].value.user_data = event.address.to_u64!
         yield sqes[0]
@@ -868,7 +867,6 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
           sqes[0].value.flags = sqes[0].value.flags | LibC::IOSQE_IO_LINK
 
           # configure the timeout operation
-          sqes[1].clear
           sqes[1].value.opcode = LibC::IORING_OP_LINK_TIMEOUT
           sqes[1].value.addr = event.value.timespec.address.to_u64!
           sqes[1].value.len = 1
