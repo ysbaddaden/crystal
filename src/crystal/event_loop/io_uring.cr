@@ -763,8 +763,13 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
   def before_close(socket : ::Socket) : Nil
     # unlike IO::FileDescriptor, we can merely shut down the socket to interrupt
     # pending operations (read, write, accept, ...)
-    ring.submit do |sqe|
-      sqe.value.opcode = LibC::IORING_OP_SHUTDOWN
+    #
+    # OPTIMIZE: we could skip calling shutdown when there's no waiter (could be
+    # a mere add/sub relaxed atomic).
+
+    # we must wait for the shutdown to complete, otherwise we might immediately
+    # submit a close... that could be executed before the shutdown (oops).
+    async(LibC::IORING_OP_SHUTDOWN) do |sqe|
       sqe.value.fd = socket.fd
       sqe.value.len = LibC::SHUT_RDWR
     end

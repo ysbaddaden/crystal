@@ -296,8 +296,8 @@ class Crystal::System::IoUring
   end
 
   # Call `io_uring_enter` syscall. Panics on EBADR (can't recover from lost
-  # CQE), returns -EINTR or -EBUSY, and raises on other errnos, otherwise
-  # returns the int returned by the syscall.
+  # CQE), returns -EINTR, -ETIME or -EBUSY, and raises on other errnos,
+  # otherwise returns the value returned by the syscall.
   def enter(to_submit : Int = 0, min_complete : Int = 0, flags : UInt32 = 0, timeout : ::Time::Span? = nil) : Int32
     if timeout
       flags |= LibC::IORING_ENTER_EXT_ARG
@@ -325,8 +325,8 @@ class Crystal::System::IoUring
     return ret if ret >= 0
 
     case ret
-    when -LibC::EINTR
-      # interrupted by signal (caller shall retry)
+    when -LibC::EINTR, -LibC::ETIME
+      # interrupted by signal (caller shall retry) or timeout expired
       ret
     when -LibC::EBUSY
       # the CQ ring is full and the kernel has overflow CQE waiting
