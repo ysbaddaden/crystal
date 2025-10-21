@@ -251,21 +251,20 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       end
     end
 
-    # The ring might have operations pending, for example the parallel context
-    # has been resized down and is shutting down schedulers, so we must delay
-    # the actual close to after the ring's queue has been drained.
-    #
-    # We keep the ring in the rings array for a full scan to eventually receive
-    # the CQE for the close ring event.
     def unregister(scheduler : Fiber::ExecutionContext::Scheduler) : Nil
       return unless ring = scheduler.__evloop_ring?
       scheduler.__evloop_ring = nil
 
-      ring.submit do |sqe|
-        sqe.value.opcode = LibC::IORING_OP_NOP
-        sqe.value.flags = LibC::IOSQE_IO_DRAIN
-        sqe.value.user_data = pointerof(@@close_ring_event).address.to_u64!
+      @mutex.synchronize do
+        # thread safety: a nilable reference is a null pointer (non mixed
+        # union): we can safely clear the value with a single store and don't
+        # need to dup the rings' array
+        if index = @rings.index(ring)
+          @rings[index] = nil
+        end
       end
+
+      ring.close
     end
   {% end %}
 
@@ -404,24 +403,16 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       case event = Pointer(Event).new(cqe.value.user_data)
       when Pointer(Event).null
         # skip CQE without an Event
-      when pointerof(@@close_ring_event)
-        {% if flag?(:execution_context) %}
-          @mutex.synchronize do
-            # thread safety: a nilable reference is a null pointer (non mixed
-            # union): we can safely clear the value with a single store
-            if index = @rings.index(ring)
-              @rings[index] = nil
-            end
-          end
-          ring.close
-        {% end %}
-        return
       else
-        event.value.res = cqe.value.res
-        # event.value.flags = cqe.value.flags
-        yield event.value.fiber
+        process_cqe(event) { |fiber| yield fiber }
       end
     end
+  end
+
+  private def process_cqe(event, &)
+    event.value.res = cqe.value.res
+    # event.value.flags = cqe.value.flags
+    yield event.value.fiber
   end
 
   private def process_timers(&)
@@ -455,7 +446,61 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
     end
   end
 
+  {% if flag?(:execution_context) %}
+    # the evloop expects every scheduler to wait on their dedicated ring
+
+    def lock?(&) : Bool
+      yield
+      true
+    end
+
+    def interrupt? : Bool
+      interrupt_impl
+    end
+
+    # Blocks the current thread until the local SQ ring has ben drained.
+    # Doesn't process @timers (another scheduler shall process them).
+    def drain(& : Fiber ->) : Nil
+      return unless ring = ring?
+
+      ring.cq_lock do
+        drain_event = uninitialized Event
+
+        # Submit a NOP to drain the local ring: it will only generate a CQE
+        # after every operations submitted before it have completed.
+        ring.submit do |sqe|
+          sqe.value.opcode = LibC::IORING_OP_NOP
+          sqe.value.flags = LibC::IOSQE_IO_DRAIN
+          sqe.value.user_data = pointerof(drain_event).address.to_u64!
+        end
+
+        # Wait & process CQEs until we get the CQE for the above NOP.
+        loop do
+          ring.each_completed do |cqe|
+            Ring.trace(cqe)
+
+            case event = Pointer(Event).new(cqe.value.user_data)
+            when Pointer(Event).null
+              # skip CQE without an Event
+            when pointerof(drain_event)
+              # done: the SQ ring has been drained
+              return
+            else
+              process_cqe(event) { |fiber| yield fiber }
+            end
+          end
+
+          ring.enter(min_complete: 1, flags: LibC::IORING_ENTER_GETEVENTS)
+        end
+      end
+    end
+  {% end %}
+
   def interrupt : Nil
+    interrupt_impl
+  end
+
+  private def interrupt_impl : Bool
     # search a waiting ring to wakeup
     waiting_ring =
       {% if flag?(:execution_context) %}
@@ -465,7 +510,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       {% else %}
         nil
       {% end %}
-    return unless waiting_ring
+    return false unless waiting_ring
 
     # try to notify the waiting ring through the local ring (every scheduler
     # should have one) but there might be bare threads, so we fallback to a
@@ -485,6 +530,8 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       res = System::Syscall.io_uring_register(-1, LibC::IORING_REGISTER_SEND_MSG_RING, pointerof(sqe).as(Void*), 1)
       raise RuntimeError.from_os_error("io_uring_register(IORING_REGISTER_SEND_MSG_RING)", Errno.new(-res)) if res < 0
     end
+
+    true
   end
 
   # (cancelable) timers
