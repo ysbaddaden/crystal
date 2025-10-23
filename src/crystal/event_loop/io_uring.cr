@@ -404,15 +404,11 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
       when Pointer(Event).null
         # skip CQE without an Event
       else
-        process_cqe(event) { |fiber| yield fiber }
+        event.value.res = cqe.value.res
+        # event.value.flags = cqe.value.flags
+        yield event.value.fiber
       end
     end
-  end
-
-  private def process_cqe(event, &)
-    event.value.res = cqe.value.res
-    # event.value.flags = cqe.value.flags
-    yield event.value.fiber
   end
 
   private def process_timers(&)
@@ -486,7 +482,9 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
               # done: the SQ ring has been drained
               return
             else
-              process_cqe(event) { |fiber| yield fiber }
+              event.value.res = cqe.value.res
+              # event.value.flags = cqe.value.flags
+              yield event.value.fiber
             end
           end
 
@@ -634,7 +632,7 @@ class Crystal::EventLoop::IoUring < Crystal::EventLoop
           end
         }
       {% else %}
-         nil
+        nil
       {% end %}
 
     async_rw(LibC::IORING_OP_WRITE, file_descriptor, slice, file_descriptor.@write_timeout, before_suspend) do |errno|
