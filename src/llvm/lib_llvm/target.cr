@@ -3,31 +3,20 @@ require "./types"
 lib LibLLVM
   type TargetDataRef = Void*
 
-  fun initialize_aarch64_target_info = LLVMInitializeAArch64TargetInfo
-  fun initialize_aarch64_target = LLVMInitializeAArch64Target
-  fun initialize_aarch64_target_mc = LLVMInitializeAArch64TargetMC
-  fun initialize_aarch64_asm_printer = LLVMInitializeAArch64AsmPrinter
-  fun initialize_aarch64_asm_parser = LLVMInitializeAArch64AsmParser
-  fun initialize_arm_target_info = LLVMInitializeARMTargetInfo
-  fun initialize_arm_target = LLVMInitializeARMTarget
-  fun initialize_arm_target_mc = LLVMInitializeARMTargetMC
-  fun initialize_arm_asm_printer = LLVMInitializeARMAsmPrinter
-  fun initialize_arm_asm_parser = LLVMInitializeARMAsmParser
-  fun initialize_avr_target_info = LLVMInitializeAVRTargetInfo
-  fun initialize_avr_target = LLVMInitializeAVRTarget
-  fun initialize_avr_target_mc = LLVMInitializeAVRTargetMC
-  fun initialize_avr_asm_printer = LLVMInitializeAVRAsmPrinter
-  fun initialize_avr_asm_parser = LLVMInitializeAVRAsmParser
-  fun initialize_webassembly_target_info = LLVMInitializeWebAssemblyTargetInfo
-  fun initialize_webassembly_target = LLVMInitializeWebAssemblyTarget
-  fun initialize_webassembly_target_mc = LLVMInitializeWebAssemblyTargetMC
-  fun initialize_webassembly_asm_printer = LLVMInitializeWebAssemblyAsmPrinter
-  fun initialize_webassembly_asm_parser = LLVMInitializeWebAssemblyAsmParser
-  fun initialize_x86_target_info = LLVMInitializeX86TargetInfo
-  fun initialize_x86_target = LLVMInitializeX86Target
-  fun initialize_x86_target_mc = LLVMInitializeX86TargetMC
-  fun initialize_x86_asm_printer = LLVMInitializeX86AsmPrinter
-  fun initialize_x86_asm_parser = LLVMInitializeX86AsmParser
+  # The list of LLVM targets is found in llvm/Config/Target.def
+  {% for name, target in {
+                           "AArch64"     => "aarch64",
+                           "ARM"         => "arm",
+                           "AVR"         => "avr",
+                           "WebAssembly" => "webassembly",
+                           "X86"         => "x86",
+                         } %}
+    fun initialize_{{target.id}}_target_info = LLVMInitialize{{name.id}}TargetInfo
+    fun initialize_{{target.id}}_target = LLVMInitialize{{name.id}}Target
+    fun initialize_{{target.id}}_target_mc = LLVMInitialize{{name.id}}TargetMC
+    fun initialize_{{target.id}}_asm_printer = LLVMInitialize{{name.id}}AsmPrinter
+    fun initialize_{{target.id}}_asm_parser = LLVMInitialize{{name.id}}AsmParser
+  {% end %}
 
   fun set_module_data_layout = LLVMSetModuleDataLayout(m : ModuleRef, dl : TargetDataRef)
 
