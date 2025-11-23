@@ -8,6 +8,7 @@ lib LibLLVM
                            "AArch64"     => "aarch64",
                            "ARM"         => "arm",
                            "AVR"         => "avr",
+                           "PowerPC"     => "powerpc",
                            "WebAssembly" => "webassembly",
                            "X86"         => "x86",
                          } %}

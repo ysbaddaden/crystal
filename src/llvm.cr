@@ -25,6 +25,7 @@ module LLVM
                            "AArch64"     => "aarch64",
                            "ARM"         => "arm",
                            "AVR"         => "avr",
+                           "PowerPC"     => "powerpc",
                            "WebAssembly" => "webassembly",
                            "X86"         => "x86",
                          } %}
@@ -52,6 +53,8 @@ module LLVM
       init_aarch64
     {% elsif flag?(:arm) %}
       init_arm
+    {% elsif flag?(:ppc) || flag?(:ppcle) || flag?(:ppc64) || flag?(:ppc64le) %}
+      init_powerpc
     {% elsif flag?(:wasm32) %}
       init_webassembly
     {% elsif flag?(:avr) %}
@@ -62,7 +65,7 @@ module LLVM
   end
 
   def self.init_all_targets : Nil
-    {% for target in %i(x86 aarch64 arm avr webassembly) %}
+    {% for target in %i(x86 aarch64 arm avr powerpc webassembly) %}
       {% if LibLLVM::BUILT_TARGETS.includes?(target) %}
         init_{{ target.id }}
       {% end %}
