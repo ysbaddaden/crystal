@@ -30,6 +30,12 @@ class Crystal::CodeGenVisitor
     check_main_fun name, func
   end
 
+  def main_fun?(name)
+    if func = typed_fun?(@main_mod, name)
+      check_main_fun name, func
+    end
+  end
+
   def check_main_fun(name, func : LLVMTypedFunction) : LLVMTypedFunction
     check_mod_fun @main_mod, name, func
   end
