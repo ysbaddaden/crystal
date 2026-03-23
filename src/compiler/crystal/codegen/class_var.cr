@@ -170,7 +170,24 @@ class Crystal::CodeGenVisitor
 
   def read_class_var(class_var : MetaTypeVar)
     last = read_class_var_ptr(class_var)
-    to_lhs last, class_var.type
+
+    if class_var.type.is_a?(MixedUnionType)
+      # Reading a mixed union requires at least two loads, we must synchronize for
+      # the operation to be "atomic" on MT, otherwise the type system assumptions
+      # may be broken (e.g. could read type as non nil while the value has already
+      # been zeroed).
+      llvm_type = llvm_type(class_var.type)
+      local_ptr = alloca llvm_type
+
+      union_rlock llvm_type, last
+      result = to_lhs last, class_var.type
+      store result, local_ptr
+      union_runlock llvm_type, last
+
+      to_lhs local_ptr, class_var.type
+    else
+      to_lhs last, class_var.type
+    end
   end
 
   def read_class_var_ptr(node : ClassVar)
