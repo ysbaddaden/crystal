@@ -42,12 +42,13 @@ module Crystal
         value_size = {(max_size + (max_alignment - 1)) // max_alignment, 1_u64}.max
         llvm_value_type = @llvm_context.int(max_alignment * 8).array(value_size)
 
-        [@llvm_context.int32, llvm_value_type]
+        # [type id, rwlock word, value]
+        [@llvm_context.int32, @llvm_context.int32, llvm_value_type]
       end
     end
 
     def union_value_type(type : MixedUnionType)
-      llvm_type(type).struct_element_types[1]
+      llvm_type(type).struct_element_types[2]
     end
   end
 
@@ -68,8 +69,12 @@ module Crystal
       aggregate_index struct_type, union_pointer, 0
     end
 
-    def union_value(struct_type, union_pointer)
+    def union_rwlock(struct_type, union_pointer)
       aggregate_index struct_type, union_pointer, 1
+    end
+
+    def union_value(struct_type, union_pointer)
+      aggregate_index struct_type, union_pointer, 2
     end
 
     def store_in_union(union_type, union_pointer, value_type, value)
@@ -81,7 +86,7 @@ module Crystal
 
     def store_bool_in_union(target_type, union_pointer, value)
       struct_type = llvm_type(target_type)
-      union_value_type = struct_type.struct_element_types[1]
+      union_value_type = struct_type.struct_element_types[2]
       store type_id(value, @program.bool), union_type_id(struct_type, union_pointer)
 
       # To store a boolean in a union
@@ -98,7 +103,7 @@ module Crystal
 
     def store_nil_in_union(target_type, union_pointer)
       struct_type = llvm_type(target_type)
-      union_value_type = struct_type.struct_element_types[1]
+      union_value_type = struct_type.struct_element_types[2]
       value = union_value_type.null
 
       store type_id(value, @program.nil), union_type_id(struct_type, union_pointer)
@@ -116,8 +121,8 @@ module Crystal
     def store_union_in_union(union_type, union_pointer, value_type, value)
       to_llvm_type = llvm_type(union_type)
       from_llvm_type = llvm_type(value_type)
-      to_value_type = to_llvm_type.struct_element_types[1]
-      from_value_type = from_llvm_type.struct_element_types[1]
+      to_value_type = to_llvm_type.struct_element_types[2]
+      from_value_type = from_llvm_type.struct_element_types[2]
 
       store type_id(value, value_type), union_type_id(to_llvm_type, union_pointer)
 
