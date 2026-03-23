@@ -1262,7 +1262,19 @@ module Crystal
         llvm_value = check_proc_is_not_closure(llvm_value, target.type)
       end
 
-      assign ptr, target_type, value.type, llvm_value
+      # Assignment to a mixed union requires at least two stores, we must
+      # synchronize for the operation to be "atomic" on MT, otherwise the type
+      # system assumptions may be broken (e.g. could read type as non nil while
+      # the value has already been zeroed).
+      #
+      # TODO: protect all target types that need 2+ store instructions
+      if target.is_a?(ClassVar) && target_type.is_a?(MixedUnionType) && (rwlock_ptr = rwlock(ptr))
+        lock rwlock_ptr
+        assign ptr, target_type, value.type, llvm_value
+        unlock rwlock_ptr
+      else
+        assign ptr, target_type, value.type, llvm_value
+      end
 
       false
     end
