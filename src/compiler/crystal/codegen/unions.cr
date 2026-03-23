@@ -69,12 +69,28 @@ module Crystal
       aggregate_index struct_type, union_pointer, 0
     end
 
-    def union_rwlock(struct_type, union_pointer)
+    def union_rwlock_ptr(struct_type, union_pointer)
       aggregate_index struct_type, union_pointer, 1
     end
 
     def union_value(struct_type, union_pointer)
       aggregate_index struct_type, union_pointer, 2
+    end
+
+    def union_lock(struct_type, union_pointer)
+      call main_fun(LOCK), [union_rwlock_ptr(struct_type, union_pointer)]
+    end
+
+    def union_unlock(struct_type, union_pointer)
+      call main_fun(UNLOCK), [union_rwlock_ptr(struct_type, union_pointer)]
+    end
+
+    def union_rlock(struct_type, union_pointer)
+      call main_fun(RLOCK), [union_rwlock_ptr(struct_type, union_pointer)]
+    end
+
+    def union_runlock(struct_type, union_pointer)
+      call main_fun(RUNLOCK), [union_rwlock_ptr(struct_type, union_pointer)]
     end
 
     def store_in_union(union_type, union_pointer, value_type, value)

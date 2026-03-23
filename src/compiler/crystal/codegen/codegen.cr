@@ -17,6 +17,10 @@ module Crystal
   GET_EXCEPTION_NAME     = "__crystal_get_exception"
   ONCE_INIT              = "__crystal_once_init"
   ONCE                   = "__crystal_once"
+  LOCK                   = "__crystal_lock"
+  UNLOCK                 = "__crystal_unlock"
+  RLOCK                  = "__crystal_rlock"
+  RUNLOCK                = "__crystal_runlock"
 
   class Program
     def run(code, filename : String? = nil, debug = Debug::Default)
@@ -499,7 +503,8 @@ module Crystal
         case node.name
         when MALLOC_NAME, MALLOC_ATOMIC_NAME, REALLOC_NAME, RAISE_NAME,
              @codegen.personality_name, GET_EXCEPTION_NAME, RAISE_OVERFLOW_NAME,
-             RAISE_CAST_FAILED_NAME, ONCE_INIT, ONCE
+             RAISE_CAST_FAILED_NAME, ONCE_INIT, ONCE,
+             LOCK, UNLOCK, RLOCK, RUNLOCK
           @codegen.accept node
         end
 
