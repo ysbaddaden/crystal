@@ -1,42 +1,69 @@
 # :nodoc:
 struct Crystal::RWLock
-  private UNLOCKED = 0
-  private LOCKED   = 1
+  UNLOCKED = 0_u32
+  WLOCK    = 1_u32
+  RLOCK    = 2_u32
+  RMASK    = ~1_u32
 
-  @writer = Atomic(Int32).new(UNLOCKED)
-  @readers = Atomic(Int32).new(0)
+  @m = Atomic(UInt32).new(UNLOCKED)
 
-  def read_lock : Nil
-    loop do
-      while @writer.get(:relaxed) != UNLOCKED
-        Intrinsics.pause
-      end
-
-      @readers.add(1, :acquire)
-
-      if @writer.get(:acquire) == UNLOCKED
-        return
-      end
-
-      @readers.sub(1, :release)
-    end
-  end
-
-  def read_unlock : Nil
-    @readers.sub(1, :release)
-  end
-
+  @[AlwaysInline]
   def write_lock : Nil
-    while @writer.swap(LOCKED, :acquire) != UNLOCKED
-      Intrinsics.pause
+    _, success = @m.compare_and_set(UNLOCKED, WLOCK, :acquire, :relaxed)
+    write_lock_slow unless success
+  end
+
+  @[NoInline]
+  private def write_lock_slow : Nil
+    backoff_loop do
+      m = @m.get(:relaxed)
+      next unless (m & WLOCK) == UNLOCKED
+
+      m, success = @m.compare_and_set(m, m | WLOCK, :acquire, :relaxed)
+      next unless success
+
+      return if (m & RMASK) == UNLOCKED
+      break
     end
 
-    while @readers.get(:acquire) != 0
-      Intrinsics.pause
+    backoff_loop do
+      m = @m.get(:relaxed)
+      break if (m & RMASK) == UNLOCKED
     end
   end
 
+  @[AlwaysInline]
   def write_unlock : Nil
-    @writer.set(UNLOCKED, :release)
+    @m.set(UNLOCKED, :release)
+  end
+
+  @[AlwaysInline]
+  def read_lock : Nil
+    _, success = @m.compare_and_set(UNLOCKED, RLOCK, :acquire, :relaxed)
+    rlock_slow unless success
+  end
+
+  @[NoInline]
+  private def read_lock_slow : Nil
+    backoff_loop do
+      m = @m.get(:relaxed)
+      next unless (m & WLOCK) == UNLOCKED
+
+      _, success = @m.compare_and_set(m, m + RLOCK, :acquire, :relaxed)
+      break if success
+    end
+  end
+
+  @[AlwaysInline]
+  def read_unlock : Nil
+    @m.sub(RLOCK, :release)
+  end
+
+  private def backoff_loop(&)
+    attempts = 0
+    while true
+      yield
+      attempts = Thread.delay(attempts)
+    end
   end
 end
