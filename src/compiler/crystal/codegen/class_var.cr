@@ -192,6 +192,13 @@ class Crystal::CodeGenVisitor
     end
   end
 
+  # Always return a pointer to the class var unlike `read_class_var` that could
+  # copy the value. See `Visit(Call)`.
+  def read_class_var_self(node : ClassVar)
+    set_current_debug_location node if @debug.line_numbers?
+    to_lhs read_class_var_ptr(node), node.type
+  end
+
   def read_class_var_ptr(node : ClassVar)
     class_var = node.var
     read_class_var_ptr(class_var)

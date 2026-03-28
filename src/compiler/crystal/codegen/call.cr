@@ -64,6 +64,12 @@ class Crystal::CodeGenVisitor
       if obj.type.passed_as_self? || obj.target_const
         request_value(obj)
       end
+    when ClassVar
+      # Can't blindly request the value because it could be a copy, `self` must
+      # always point to the class var's memory.
+      request_value do
+        @last = read_class_var_self(obj)
+      end
     when ASTNode
       # Always accept obj: even if it's not passed as self this might
       # involve intermediate calls with side effects.
