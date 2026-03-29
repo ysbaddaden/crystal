@@ -1267,8 +1267,9 @@ module Crystal
       # system assumptions may be broken (e.g. could read type as non nil while
       # the value has already been zeroed).
       #
-      # TODO: protect all target types that need 2+ store instructions
-      if target.is_a?(ClassVar) && target_type.is_a?(MixedUnionType) && (rwlock_ptr = rwlock(ptr))
+      # We extend the synchronization by protecting any value that isn't thread
+      # safe (integer larger than register size, struct with 2 elements, ...)
+      if target.is_a?(ClassVar) && !thread_safe?(target_type) && (rwlock_ptr = rwlock(ptr))
         lock rwlock_ptr
         assign ptr, target_type, value.type, llvm_value
         unlock rwlock_ptr
@@ -2630,6 +2631,61 @@ module Crystal
 
     def visit(node : ASTNode)
       true
+    end
+
+    # Returns true if copying *type* is thread safe, that is generates a single
+    # instruction to load from/store to memory. For example `Int32` or `Pointer`
+    # or `StaticArray(Int32, 1)` are safe, but a mixed `Pointer | Int32`,
+    # `StaticArray(Int128, 1) or `StaticArray(Int32, 2)` are not.
+    private def thread_safe?(type)
+      case type
+      when MixedUnionType, ReferenceStorageType
+        false
+      when IntegerType
+        type.bits <= llvm_typer.pointer_bit_size
+      when StaticArrayInstanceType
+        case type.size
+        when 0
+          true
+        when 1
+          thread_safe?(type.element_type)
+        else
+          false
+        end
+      when TupleInstanceType
+        case type.tuple_types.size
+        when 0
+          true
+        when 1
+          thread_safe?(type.tuple_types.first)
+        else
+          false
+        end
+      when NamedTupleInstanceType
+        case type.entries.size
+        when 0
+          true
+        when 1
+          thread_safe?(type.entries.first.type)
+        else
+          false
+        end
+      when InstanceVarContainer
+        if type.struct?
+          case type.instance_vars.size
+          when 0
+            true
+          when 1
+            thread_safe?(type.instance_vars.first[1].type)
+          else
+            false
+          end
+        else
+          true
+        end
+      else
+        true
+      end
     end
   end
 

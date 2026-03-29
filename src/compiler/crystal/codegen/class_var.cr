@@ -176,8 +176,9 @@ class Crystal::CodeGenVisitor
     # may be broken (e.g. could read type as non nil while the value has already
     # been zeroed).
     #
-    # TODO: protect all target types that need 2+ load instructions
-    if class_var.type.is_a?(MixedUnionType) && (rwlock_ptr = rwlock(last))
+    # We extend the synchronization to protecting any value that isn't thread
+    # safe (integer larger than register size, struct with 2 elements, ...).
+    if !thread_safe?(class_var.type) && (rwlock_ptr = rwlock(last))
       llvm_type = llvm_type(class_var.type)
       local_ptr = alloca llvm_type
 

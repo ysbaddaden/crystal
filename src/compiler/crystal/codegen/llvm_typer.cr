@@ -604,9 +604,14 @@ module Crystal
     end
 
     @pointer_size : UInt64?
+    @pointer_bit_size : UInt64?
 
     def pointer_size
       @pointer_size ||= size_of(@llvm_context.void_pointer)
+    end
+
+    def pointer_bit_size
+      @pointer_bit_size ||= pointer_size * 8
     end
   end
 end
