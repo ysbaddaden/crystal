@@ -228,10 +228,22 @@ module Regex::PCRE2
     end
   end
 
-  class_getter match_context : LibPCRE2::MatchContext* do
-    match_context = LibPCRE2.match_context_create(nil)
-    LibPCRE2.jit_stack_assign(match_context, ->(_data) { current_jit_stack.value }, nil)
-    match_context
+  # We can't use the normal @@classvar = value implementation because it would
+  # always link libpcre2 into every program, even if there isn't any regular
+  # expression.
+  #
+  # We don't use class_getter(&) either because it generates a mixed `Pointer |
+  # Nil` union that is thread unsafe and requires a rwlock on every access when
+  # what we want is to initialize the value once (quick flag check).
+  @@match_context = Pointer(LibPCRE2::MatchContext).null
+  @@match_context_flag = false
+
+  def self.match_context : LibPCRE2::MatchContext*
+    Crystal.once(pointerof(@@match_context_flag)) do
+      @@match_context = LibPCRE2.match_context_create(nil)
+      LibPCRE2.jit_stack_assign(@@match_context, ->(_data) { current_jit_stack.value }, nil)
+    end
+    @@match_context
   end
 
   # JIT stack is unique per thread.
