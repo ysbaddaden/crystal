@@ -1678,7 +1678,15 @@ module Crystal
     end
 
     def codegen_type_filter(node, &)
-      accept node.obj
+      case obj = node.obj
+      when ClassVar
+        # Don't accept the node because the value could be a copy if it's type
+        # is thread unsafe, but we don't need thread safety because the semantic
+        # pass didn't decide anything based on this type check.
+        @last = read_class_var_self(obj)
+      else
+        accept node.obj
+      end
 
       if @needs_value
         obj_type = node.obj.type
