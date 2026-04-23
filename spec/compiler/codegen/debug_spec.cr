@@ -302,6 +302,16 @@ describe "Code gen: debug" do
       CRYSTAL
   end
 
+  it "codegens proc debug info" do
+    codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
+      x = ->(n : Int32) { n &+ 1 }
+      y : Proc(Int32, Int32)? = ->(n : Int32) { n &+ 2 }
+      captured = 40
+      z = ->(n : Int32) { captured &+ n }
+      {x, y, z}
+      CRYSTAL
+  end
+
   {% unless LibLLVM::IS_LT_210 %}
     it "supports 128-bit enumerators" do
       codegen(<<-CRYSTAL, debug: Crystal::Debug::All).to_s.should contain(%(!DIEnumerator(name: "X", value: 1002003004005006007008009)))
