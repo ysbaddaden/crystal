@@ -202,6 +202,71 @@ describe "Code gen: debug" do
       CRYSTAL
   end
 
+  it "emits global debug info for constants" do
+    mod = codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
+      struct Bar
+        def initialize(@x : Int32)
+        end
+      end
+
+      A = Bar.new(41)
+
+      v1 = A
+      v1
+      CRYSTAL
+
+    str = mod.to_s
+    str.should contain("DIGlobalVariable(name: \"A\", linkageName: \"A\",")
+    str.should contain(%(~A:const_init))
+  end
+
+  it "emits global debug info once for constants read before assignment" do
+    mod = codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
+      require "prelude"
+
+      struct Bar
+        def initialize(@x : Int32)
+        end
+      end
+
+      A
+      A = Bar.new(41)
+      CRYSTAL
+
+    str = mod.to_s
+    str.scan(%r{DIGlobalVariable\(name: "A", linkageName: "A",}).size.should eq(1)
+    str.should contain(%(~A:const_init))
+  end
+
+  it "keeps literal constants inlined in debug mode" do
+    mod = codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
+      A = 1
+      A
+      CRYSTAL
+
+    str = mod.to_s
+    str.should_not match(/^@A =/)
+    str.should contain("ret i32 1")
+  end
+
+  it "emits global debug info for class vars" do
+    mod = codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
+      class Foo
+        @@x = "world"
+
+        def self.x
+          @@x
+        end
+      end
+
+      Foo.x
+      CRYSTAL
+
+    str = mod.to_s
+    str.should match(/@"Foo::x" = global (?:ptr|%String\*) null, !dbg !/)
+    str.should contain("DIGlobalVariable(name: \"Foo::x\", linkageName: \"Foo::x\",")
+  end
+
   it "stores and restores debug location after jumping to main (#6920)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
       require "prelude"
