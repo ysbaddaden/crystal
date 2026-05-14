@@ -38,8 +38,6 @@ module Sync
 
     LONG_WAIT_THRESHOLD = 30
 
-    alias BeforePark = Proc(Nil)
-
     def initialize
       @word = Atomic(UInt32).new(UNLOCKED)
       @waiters = Crystal::PointerLinkedList(Waiter).new
@@ -54,6 +52,7 @@ module Sync
       end
     end
 
+    @[AlwaysInline]
     def try_lock? : Bool
       # uncontended
       word, success = @word.compare_and_set(UNLOCKED, WLOCK, :acquire, :relaxed)
@@ -68,6 +67,7 @@ module Sync
       end
     end
 
+    @[AlwaysInline]
     def try_rlock? : Bool
       # uncontended
       word, success = @word.compare_and_set(UNLOCKED, RLOCK, :release, :relaxed)
@@ -82,36 +82,46 @@ module Sync
       end
     end
 
+    @[AlwaysInline]
     def lock : Nil
       unless try_lock?
         lock_slow
       end
     end
 
+    @[AlwaysInline]
     def rlock : Nil
       unless try_rlock?
         rlock_slow
       end
     end
 
-    def lock_slow(before_park : BeforePark? = nil)
+    @[NoInline]
+    def lock_slow : Nil
+      lock_slow { }
+    end
+
+    @[NoInline]
+    def rlock_slow : Nil
+      rlock_slow { }
+    end
+
+    def lock_slow(&before_suspend) : Nil
       waiter = Waiter.new(:writer)
 
       lock_slow_impl(pointerof(waiter),
         zero_to_acquire: ANY_LOCK,
         add_on_acquire: WLOCK,
         set_on_waiting: WRITER_WAITING,
-        clear_on_acquire: WRITER_WAITING,
-        before_park: before_park)
+        clear_on_acquire: WRITER_WAITING) { yield }
     end
 
-    def rlock_slow(before_park : BeforePark? = nil)
+    def rlock_slow(&before_suspend) : Nil
       waiter = Waiter.new(:reader)
 
       lock_slow_impl(pointerof(waiter),
         zero_to_acquire: WLOCK | WRITER_WAITING,
-        add_on_acquire: RLOCK,
-        before_park: before_park)
+        add_on_acquire: RLOCK) { yield }
     end
 
     # Called from CV#wait after a cv waiter has been transferred to mu then
@@ -129,10 +139,10 @@ module Sync
         set_on_waiting = 0_u32
         clear_on_acquire = 0_u32
       end
-      lock_slow_impl(waiter, zero_to_acquire, add_on_acquire, set_on_waiting, clear_on_acquire, clear)
+      lock_slow_impl(waiter, zero_to_acquire, add_on_acquire, set_on_waiting, clear_on_acquire, clear) { }
     end
 
-    private def lock_slow_impl(waiter, zero_to_acquire, add_on_acquire, set_on_waiting = 0_u32, clear_on_acquire = 0_u32, clear = 0_u32, before_park = nil) : Nil
+    private def lock_slow_impl(waiter, zero_to_acquire, add_on_acquire, set_on_waiting = 0_u32, clear_on_acquire = 0_u32, clear = 0_u32, &before_suspend) : Nil
       long_wait = 0_u32
       zero_to_acquire |= LONG_WAIT
       set_on_waiting |= WAITING
@@ -163,13 +173,11 @@ module Sync
             end
             release_spinlock
 
-            if before_park
-              begin
-                before_park.call
-              rescue ex
-                abort_wait(waiter)
-                raise ex
-              end
+            begin
+              yield
+            rescue exception
+              abort_wait(waiter)
+              raise exception
             end
 
             # wait...

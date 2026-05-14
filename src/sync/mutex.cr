@@ -43,38 +43,52 @@ module Sync
 
     # Acquires the exclusive lock.
     def lock : Nil
-      unless @mu.try_lock?
-        before_park = nil
-
-        unless @type.unchecked?
-          if owns_lock?
-            raise Error::Deadlock.new("Can't lock mutex recursively") unless @type.reentrant?
-            @counter += 1
-            return
-          end
-          {% if flag?(:deadlock) %}
-            before_park = ->deadlock_detection
-          {% end %}
-        end
-
-        @mu.lock_slow(before_park)
-      end
-
-      unless @type.unchecked?
-        set_owner
+      if @mu.try_lock?
+        set_owner unless @type.unchecked?
+      elsif @type.unchecked?
+        @mu.lock_slow
+      else
+        lock_slow
       end
     end
 
-    {% if flag?(:deadlock) %}
-      private def deadlock_detection : Nil
-        return unless owner = @locked_by
-
-        Fiber.current.__sync_locked.each do |lock|
-          next unless lock.@mu.waiting?(owner)
-          raise Error::Deadlock.new("Can't lock mutex already locked by #{lock.@locked_by} and waiting on #{lock} locked by the current fiber)")
+    @[NoInline]
+    private def lock_slow : Nil
+      if owns_lock?
+        unless @type.reentrant?
+          raise Error::Deadlock.new("Can't lock mutex recursively", Fiber.current, Fiber.current, self, self)
         end
+        @counter += 1
+        return
       end
-    {% end %}
+
+      @mu.lock_slow do
+        {% if flag?(:deadlock) %}
+          # no owner; at worst the owner just unlocked and thus can't be
+          # waiting on any lock we own (no deadlock, yet)
+          return unless owner = @locked_by
+
+          fiber = Fiber.current
+          fiber.__sync_locked.each do |lock|
+            # is the lock's owner waiting on any lock the current fiber owns?
+            next unless lock.@mu.waiting?(owner)
+
+            # Yes? deadlock!
+
+            # TODO: add *owner* to a list of tainted fibers on this lock, the
+            # owner shall verify it after acquiring the lock, and when present
+            # unlock and also raise a deadlock exception.
+
+            f1 = fiber.name || "0x#{fiber.object_id.to_s(16)}"
+            f2 = owner.name || "0x#{owner.object_id.to_s(16)}"
+            message = "Fiber A (#{f1}) holds mutex1 and waits for mutex2, while fiber B (#{f2}) holds mutex2 and waits for mutex1"
+            raise Error::Deadlock.new(message, fiber, owner, lock, self)
+          end
+        {% end %}
+      end
+
+      set_owner
+    end
 
     # Releases the exclusive lock.
     def unlock : Nil
