@@ -27,6 +27,7 @@ module Sync
     def initialize(@type : Type = :checked)
       @counter = 0
       @mu = MU.new
+      @locked_by = Atomic(Fiber?).new(nil)
     end
 
     # Acquires the exclusive lock for the duration of the block. The lock will
@@ -66,7 +67,7 @@ module Sync
         {% if flag?(:deadlock) %}
           # no owner; at worst the owner just unlocked and thus can't be
           # waiting on any lock we own (no deadlock, yet)
-          return unless owner = @locked_by
+          next unless owner = @locked_by.get(:relaxed)
 
           fiber = Fiber.current
           fiber.__sync_locked.each do |lock|
@@ -95,7 +96,7 @@ module Sync
       unless @type.unchecked?
         unless owns_lock?
           message =
-            if @locked_by
+            if @locked_by.lazy_get
               "Can't unlock Sync::Mutex locked by another fiber"
             else
               "Can't unlock Sync::Mutex that isn't locked"
@@ -131,24 +132,28 @@ module Sync
     end
 
     private def set_owner(counter = 1) : Nil
-      @locked_by = fiber = Fiber.current
-      @counter = counter if @type.reentrant?
-
       {% if flag?(:deadlock) %}
+        fiber = Fiber.current
+        @locked_by.set(fiber, :relaxed)
         fiber.__sync_locked << self
+      {% else %}
+        @locked_by.lazy_set(fiber)
       {% end %}
+
+      @counter = counter if @type.reentrant?
     end
 
     private def unset_owner : Nil
-      fiber, @locked_by = @locked_by, nil
+      fiber = @locked_by.lazy_get
+      @locked_by.set(nil, :relaxed)
 
       {% if flag?(:deadlock) %}
-        fiber.as(Fiber).__sync_locked.delete(pointerof(@mu))
+        fiber.__sync_locked.delete(self)
       {% end %}
     end
 
     protected def owns_lock? : Bool
-      @locked_by == Fiber.current
+      @locked_by.lazy_get == Fiber.current
     end
 
     # :nodoc:
