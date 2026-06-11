@@ -347,6 +347,30 @@ class Crystal::EventLoop::IOCP < Crystal::EventLoop
     raise NotImplementedError.new("Crystal::System::IOCP#wait_writable(FileDescriptor)")
   end
 
+  # Extension to asynchronously lock file.
+  def lock_file(file_descriptor : Crystal::System::FileDescriptor, flags : UInt32) : Nil
+    handle = file_descriptor.windows_handle
+
+    System::IOCP::IOOverlappedOperation.run(handle) do |operation|
+      result = LibC.LockFileEx(handle, flags, 0, 0xFFFF_FFFF, 0xFFFF_FFFF, operation)
+
+      if result == 0
+        case error = WinError.value
+        when .error_io_pending?
+          # the operation is running asynchronously
+        else
+          raise IO::Error.from_os_error("LockFileEx", error, target: self)
+        end
+      else
+        return
+      end
+
+      operation.wait_for_result(nil) do |error|
+        raise IO::Error.from_os_error("LockFileEx", error, target: self)
+      end
+    end
+  end
+
   def reopened(file_descriptor : Crystal::System::FileDescriptor) : Nil
     raise NotImplementedError.new("Crystal::System::IOCP#reopened(FileDescriptor)")
   end
