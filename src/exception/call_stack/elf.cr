@@ -10,6 +10,8 @@ struct Exception::CallStack
   DEBUG_ABBREV   = ".debug_abbrev"
   DEBUG_INFO     = ".debug_info"
 
+  @@base_address = LibC::Elf_Addr.zero
+
   private struct DlPhdrData
     getter program : String
     property base_address : LibC::Elf_Addr = 0
@@ -19,10 +21,19 @@ struct Exception::CallStack
   end
 
   protected def self.load_debug_info_impl : Nil
-    program = Process.executable_path
-    return unless program && File::Info.readable? program
+    return unless path = Process.executable_path
+    return unless program = Crystal::System::ELF.open(path)
 
-    data = DlPhdrData.new(program)
+    load_base_address(path)
+    preload_dwarf_sections(program)
+  end
+
+  # Determine the address offset at which the program was loaded at.
+  #
+  # FIXME: depends on a dynamic loader, it may not work with static executables,
+  # for example musl-libc.
+  private def self.load_base_address(path)
+    data = DlPhdrData.new(path)
 
     phdr_callback = LibC::DlPhdrCallback.new do |info, size, data|
       # `dl_iterate_phdr` does not always visit the current program first; on
@@ -31,10 +42,6 @@ struct Exception::CallStack
       name_c_str = info.value.name
       if name_c_str && (name_c_str.value == 0 || LibC.strcmp(name_c_str, data.as(DlPhdrData*).value.program) == 0)
         # The first entry is the header for the current program.
-        # Note that we avoid allocating here and just store the base address
-        # to be passed to self.read_dwarf_sections when dl_iterate_phdr returns.
-        # Calling self.read_dwarf_sections from this callback may lead to reallocations
-        # and deadlocks due to the internal lock held by dl_iterate_phdr (#10084).
         data.as(DlPhdrData*).value.base_address = info.value.addr
         1
       else
@@ -43,16 +50,14 @@ struct Exception::CallStack
     end
 
     LibC.dl_iterate_phdr(phdr_callback, pointerof(data))
-
-    Crystal::System::ELF.open(data.program) do |image|
-      read_dwarf_sections(image, data.base_address)
-    end
-  rescue ex
-    @@dwarf_line_numbers = nil
-    @@dwarf_function_names = nil
+    @@base_address = data.base_address
   end
 
   protected def self.decode_address(ip)
-    ip.address
+    if ip.null?
+      ip.address
+    else
+      ip.address &- @@base_address
+    end
   end
 end
