@@ -60,4 +60,8 @@ struct Exception::CallStack
       ip.address &- @@base_address
     end
   end
+
+  protected def self.recode_address(pc)
+    Pointer(Void).new(pc &+ @@base_address)
+  end
 end

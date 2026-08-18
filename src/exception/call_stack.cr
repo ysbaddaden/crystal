@@ -56,17 +56,51 @@ struct Exception::CallStack
       CallStack.load_debug_info
       show_full_info = ENV["CRYSTAL_CALLSTACK_FULL_INFO"]? == "1"
 
-      @callstack.compact_map do |ip|
-        CallStack.decode_backtrace_frame(ip, show_full_info)
+      if ENV.has_key?("dw_many")
+        # resolve multiple addresses at the same time; allows to scan the DWARF
+        # sections once for a backtrace, not once per address, we also
+        # de-duplicate addresses so we only resolve every IP once
+        backtrace = Array(String?).new(@callstack.size, nil)
+        missing_pcs = Array(UInt64).new(@callstack.size)
+
+        @@lru_cache.lock do |cache|
+          @callstack.each_with_index do |ip, index|
+            if line = cache.fetch?(ip)
+              backtrace[index] = line unless line.empty?
+            elsif !ip.null?
+              pc = CallStack.decode_address(ip)
+              missing_pcs << pc unless missing_pcs.includes?(pc)
+            end
+          end
+        end
+
+        unless missing_pcs.empty?
+          missing_pcs.sort!
+
+          CallStack.decode_backtrace_frames(missing_pcs, show_full_info) do |pc, line|
+            @callstack.each_with_index do |ip, index|
+              if backtrace[index]?.nil? && CallStack.decode_address(ip) == pc
+                backtrace[index] = line
+              end
+            end
+          end
+        end
+
+        backtrace.compact
+      else
+        # resolve addresses one by one
+        @callstack.compact_map do |ip|
+          CallStack.decode_backtrace_frame(ip, show_full_info) unless ip.null?
+        end
       end
     {% end %}
   end
 
   # :nodoc:
   def self.decode_backtrace_frame(ip, show_full_info) : String?
-    line = @@lru_cache.lock(&.fetch?(ip))
-
-    unless line
+    if line = @@lru_cache.lock(&.fetch?(ip))
+      line unless line.empty?
+    else
       pc = decode_address(ip)
       file, line_number, column_number = decode_line_number(pc)
 
@@ -77,9 +111,29 @@ struct Exception::CallStack
       end
 
       @@lru_cache.lock(&.put(ip, line || ""))
+      line
     end
+  end
 
-    line
+  # :nodoc:
+  def self.decode_backtrace_frames(pcs, show_full_info, &) : Nil
+    functions = decode_function_names(pcs)
+    line_numbers = decode_line_numbers(pcs)
+
+    pcs.each do |pc|
+      line = nil
+      ip = recode_address(pc)
+      file, line_number, column_number = line_numbers[pc]? || {"??", 0, 0}
+
+      unless @@skip.includes?(file)
+        file = relative_to_initial_directory(file)
+        function, file = function_or_symbol_name(ip, file, show_full_info) { functions[pc]? }
+        line = format_backtrace_frame(file, line_number, column_number, function, show_full_info ? ip : nil)
+        yield pc, line
+      end
+
+      @@lru_cache.lock(&.put(ip, line || ""))
+    end
   end
 
   private def self.format_backtrace_frame(file, line_number, column_number, function, ip) : String?

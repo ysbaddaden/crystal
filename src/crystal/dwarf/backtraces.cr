@@ -39,6 +39,29 @@ module Crystal
       end
 
       def lookup_function_name(pc : Int) : Bytes?
+        each_function_name do |low_pc, high_pc, name_form, name_value|
+          if low_pc <= pc <= high_pc
+            return decode_str(name_form, name_value)
+          end
+        end
+      end
+
+      def lookup_function_names(pcs : Enumerable(UInt64), &) : Nil
+        return if pcs.empty?
+
+        found = pcs.size
+
+        each_function_name do |low_pc, high_pc, name_form, name_value|
+          pcs.each do |pc|
+            if low_pc <= pc <= high_pc
+              yield pc, decode_str(name_form, name_value)
+              break if (found -= 1) == 0
+            end
+          end
+        end
+      end
+
+      def each_function_name(&) : Nil
         return unless @initialized
         return unless debug_abbrev = @debug_abbrev
         return unless debug_info = @debug_info
@@ -76,9 +99,7 @@ module Crystal
                 end
 
                 if low_pc && high_pc && name_form && name_value
-                  if low_pc <= pc <= high_pc
-                    return decode_str(name_form, name_value)
-                  end
+                  yield low_pc, high_pc, name_form, name_value
                 end
               else
                 abbrev.each_attribute do |attr|
@@ -91,74 +112,107 @@ module Crystal
       end
 
       def lookup_line_number(pc : Int) : {Bytes, Bytes, UInt32, UInt32} | Nil
+        each_line_number do |sequence, low_pc, limit_pc, file_index, line, column|
+          next unless low_pc <= pc < limit_pc
+
+          directory, file = file_and_directory_at(sequence, file_index)
+          return directory, file, line, column
+        end
+      end
+
+      # NOTE: *pcs* MUST be sorted in ascending order.
+      # NOTE: *pcs* SHOULD have unique values.
+      def lookup_line_numbers(pcs : Array(UInt64), &) : Nil
+        return if pcs.empty?
+        offset = 0
+
+        each_line_number do |sequence, low_pc, limit_pc, file_index, line, column|
+          # PCs are sorted in ascending order, we only compare the first PCs
+          # that may match, and skip any PC that has fallen behind (not found)
+          pcs.each(within: offset..) do |pc|
+            break if pc >= limit_pc
+
+            if pc >= low_pc
+              directory, file = file_and_directory_at(sequence, file_index)
+              yield pc, directory, file, line, column
+            end
+
+            break if (offset += 1) == pcs.size
+          end
+        end
+      end
+
+      def each_line_number(&) : Nil
         return unless @initialized
         return unless debug_line = @debug_line
+
+        # state of the previous entry in the matrix
+        address = 0_u64
+        file_index = 0_u32
+        line = 0_u32
+        column = 0_u32
 
         DWARF.each_line_sequence(debug_line) do |sequence|
           registers = Line::Registers.new(sequence.default_is_stmt)
 
-          # state of the previous entry in the matrix
-          file_index = 0_u32
-          line = 0_u32
-          column = 0_u32
-
           sequence.read_statement_program(pointerof(registers)) do
-            if pc < registers.address
-              # the previous state matched, we now resolve directory/file
-              file = Bytes.empty
-              directory = Bytes.empty
-              directory_index = 0
-
-              # must parse directories before we can parse files (skip)
-              sequence.each_directory { }
-
-              # files are 1-indexed
-              i = 1
-              sequence.each_file do |(form, value), dir_index, _, _, _|
-                if i == file_index
-                  file = decode_str(form, value)
-                  directory_index = dir_index
-                  break
-                end
-                i += 1
-              end
-
-              unless file.empty?
-                case directory_index
-                when 0
-                  # special case
-                  directory = ".".to_slice
-                else
-                  # re-parse the directories to get the file's directory
-                  sequence.rewind_headers
-
-                  # directories are 1-indexed
-                  i = 1
-                  sequence.each_directory do |(form, value)|
-                    if i == directory_index
-                      directory = decode_str(form, value)
-                      break
-                    end
-                    i += 1
-                  end
-                end
-              end
-
-              return {directory, file, line, column}
+            unless address.zero?
+              yield pointerof(sequence), address, registers.address, file_index, line, column
             end
 
             # save state
+            address = registers.address
             file_index = registers.file
             line = registers.line
             column = registers.column
           end
         end
-
-        # not found
-        nil
       end
 
-      private def decode_str(form, value)
+      private def file_and_directory_at(sequence, file_index)
+        file = Bytes.empty
+        directory = Bytes.empty
+        directory_index = 0
+
+        # must parse directories before we can parse files (skip)
+        sequence.value.each_directory { }
+
+        # files are 1-indexed
+        i = 1
+        sequence.value.each_file do |(form, value), dir_index, _, _, _|
+          if i == file_index
+            file = decode_str(form, value)
+            directory_index = dir_index
+            break
+          end
+          i += 1
+        end
+
+        unless file.empty?
+          case directory_index
+          when 0
+            # special case
+            directory = ".".to_slice
+          else
+            # re-parse the directories to get the file's directory
+            sequence.value.rewind_headers
+
+            # directories are 1-indexed
+            i = 1
+            sequence.value.each_directory do |(form, value)|
+              if i == directory_index
+                directory = decode_str(form, value)
+                break
+              end
+              i += 1
+            end
+          end
+        end
+
+        {directory, file}
+      end
+
+      def decode_str(form, value)
         case form
         when DW_FORM_string
           value.as(Bytes)
