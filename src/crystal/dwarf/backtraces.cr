@@ -21,6 +21,12 @@ module Crystal
       # instead of absolute PCs (u64).
       @function_names = Slice({UInt64, UInt64, UInt8*}).empty
 
+      # Unlike function names we can't build a complete decompressed table as it
+      # would quickly allocate several megabytes of memory. Instead, we build an
+      # index of offsets and line registers to quickly find a sub-section and
+      # resume the iteration.
+      @line_numbers = Slice({Line::Registers, Int32, Int32}).empty
+
       @initialized = false
 
       def build_caches : Nil
@@ -29,6 +35,11 @@ module Crystal
         else
           build_abbrev_indexes
         end
+
+        if ENV.has_key?("dw_index_lines")
+          preload_line_numbers
+        end
+
         @initialized = true
       end
 
@@ -132,9 +143,11 @@ module Crystal
           low_pc, high_pc, cstring = a.to_unsafe[m]
 
           if low_pc <= pc <= high_pc
+            # found matching entry, abort
             return Bytes.new(cstring, LibC.strlen(cstring))
           end
 
+          # leftmost binary search
           if low_pc < pc
             l = m &+ 1
           else
@@ -200,13 +213,66 @@ module Crystal
         end
       end
 
-      def lookup_line_number(pc : Int) : {Bytes, Bytes, UInt32, UInt32} | Nil
-        each_line_number do |sequence, low_pc, limit_pc, file_index, line, column|
-          next unless low_pc <= pc < limit_pc
+      private def preload_line_numbers : Nil
+        return unless debug_line = @debug_line
 
-          directory, file = file_and_directory_at(sequence, file_index)
-          return directory, file, line, column
+        table = memory_map(debug_line.bytesize, Tuple(Line::Registers, Int32, Int32)) do |slice|
+          size = 0
+
+          DWARF.each_line_sequence(debug_line) do |sequence, sequence_offset|
+            registers = Line::Registers.new(sequence.default_is_stmt)
+            n = 0_u32
+
+            sequence.read_statement_program(pointerof(registers)) do |offset|
+              if (n & 127) == 0
+                slice[size] = {registers, sequence_offset, offset}
+                size += 1
+              end
+              n &+= 1
+            end
+          end
+
+          size
         end
+
+        @line_numbers = table if table
+      end
+
+      def lookup_line_number(pc : Int) : {Bytes, Bytes, UInt32, UInt32} | Nil
+        if @line_numbers.empty?
+          each_line_number do |sequence, low_pc, limit_pc, file_index, line, column|
+            if low_pc <= pc < limit_pc
+              directory, file = file_and_directory_at(sequence, file_index)
+              return directory, file, line, column
+            end
+          end
+        elsif i = bsearch_line_number_index(pc)
+          resume_each_line_number(i) do |sequence, low_pc, limit_pc, file_index, line, column|
+            if low_pc <= pc < limit_pc
+              directory, file = file_and_directory_at(sequence, file_index)
+              return directory, file, line, column
+            end
+          end
+        end
+      end
+
+      private def bsearch_line_number_index(pc)
+        a = @line_numbers
+        l, r = 0, a.size
+
+        while l < r
+          m = l + (r - l) // 2
+          addr = (a.to_unsafe + m).value[0].address
+
+          # rightmost binary search
+          if addr > pc
+            r = m
+          else
+            l = m + 1
+          end
+        end
+
+        r - 1 if r > 0
       end
 
       # NOTE: *pcs* MUST be sorted in ascending order.
@@ -245,6 +311,34 @@ module Crystal
           registers = Line::Registers.new(sequence.default_is_stmt)
 
           sequence.read_statement_program(pointerof(registers)) do
+            unless address.zero?
+              yield pointerof(sequence), address, registers.address, file_index, line, column
+            end
+
+            # save state
+            address = registers.address
+            file_index = registers.file
+            line = registers.line
+            column = registers.column
+          end
+        end
+      end
+
+      private def resume_each_line_number(i, &) : Nil
+        return unless @initialized
+        return unless debug_line = @debug_line
+
+        registers, sequence_offset, program_offset = @line_numbers.to_unsafe[i]
+
+        # record state
+        address = registers.address
+        file_index = registers.file
+        line = registers.line
+        column = registers.column
+
+        i = -1
+        DWARF.line_sequence_at(debug_line + sequence_offset) do |sequence|
+          sequence.resume_statement_program(pointerof(registers), program_offset) do
             unless address.zero?
               yield pointerof(sequence), address, registers.address, file_index, line, column
             end
