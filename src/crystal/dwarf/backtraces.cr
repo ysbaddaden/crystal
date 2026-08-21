@@ -30,14 +30,30 @@ module Crystal
       @initialized = false
 
       def build_caches : Nil
-        if ENV.has_key?("dw_cache_functions")
-          preload_function_names
-        else
-          build_abbrev_indexes
+        fn_time = nil
+        ln_time = nil
+
+        total = Time.measure do
+          if ENV.has_key?("dw_cache_functions")
+            fn_time = Time.measure { preload_function_names }
+          else
+            build_abbrev_indexes
+          end
+
+          if ENV.has_key?("dw_index_lines")
+            ln_time = Time.measure { preload_line_numbers }
+          end
         end
 
-        if ENV.has_key?("dw_index_lines")
-          preload_line_numbers
+        if ENV.has_key?("dw_stats")
+          print ".debug_abbrev bytesize=#{@debug_abbrev.try &.bytesize}\n"
+          print ".debug_info bytesize=#{@debug_info.try &.bytesize}\n"
+          print ".debug_line bytesize=#{@debug_line.try &.bytesize}\n"
+          print ".debug_line_str bytesize=#{@debug_line_str.try &.bytesize}\n"
+          print ".debug_str bytesize=#{@debug_line.try &.bytesize}\n"
+          print "DW_function_cache size=#{@function_names.size} bytesize=#{@function_names.bytesize} time=#{fn_time.try &.to_microseconds}us\n"
+          print "DW_line_index size=#{@line_numbers.size} bytesize=#{@line_numbers.bytesize} time=#{ln_time.try &.to_microseconds}us\n"
+          print "DW_preload total_time=#{total.to_microseconds}us\n"
         end
 
         @initialized = true

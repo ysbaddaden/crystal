@@ -68,6 +68,11 @@ def test3
   test2
 end
 
+if ENV.has_key?("dw_stats")
+  Exception::CallStack.load_debug_info
+  exit 0
+end
+
 # # actual benchmarks
 puts "BENCH GC_HEAP GC_FREE RTIME STIME MAXRSS MINFLT C/S"
 

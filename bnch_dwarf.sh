@@ -12,6 +12,8 @@ if [ "$mode" = "dev" ]; then
     set +x
   fi
 
+  dw_stats=1 dw_cache_functions=1 dw_index_lines=1 ./bnch_dwarf-scan-dev
+
   echo
   echo "dev (1.21.0)"
   ./bnch_dwarf-dev | column -t
@@ -42,6 +44,8 @@ elif [ "$mode" = "rel" ]; then
     bin/crystal build -p ./bnch_dwarf.cr --release -o bnch_dwarf-scan-release
     set +x
   fi
+
+  dw_stats=1 dw_cache_functions=1 dw_index_lines=1 ./bnch_dwarf-scan-release
 
   echo
   echo "rel (1.21.0)"
