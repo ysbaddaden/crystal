@@ -74,7 +74,7 @@ module Crystal::DWARF
         reader = Reader.new(@program)
         reader.pos = offset
 
-        while true
+        until reader.eof?
           opcode = reader.read_u8
 
           if opcode >= @opcode_base
