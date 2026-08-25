@@ -228,6 +228,7 @@ describe Socket, tags: "network" do
         server.listen
 
         actual = nil
+        pos = file.pos
 
         spawn do
           client = server.not_nil!.accept
@@ -241,6 +242,7 @@ describe Socket, tags: "network" do
         string = socket.gets_to_end
 
         actual.should eq(expected)
+        file.pos.should eq(pos), "expected Socket#sendfile to not affect File#pos"
 
         string
       ensure
