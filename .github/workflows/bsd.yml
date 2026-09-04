@@ -56,6 +56,5 @@ jobs:
             crystal version
           run: |
             set -eux
-            export LD_LIBRARY_PATH="$(ls /usr/local/llvm* | sort -V | tail -n 1)/lib"
-            echo $LD_LIBRARY_PATH
+            export LD_LIBRARY_PATH="/usr/local/llvm19/lib"
             gmake std_spec CRYSTAL=/usr/local/libexec/crystal
