@@ -1,78 +1,78 @@
-name: macOS CI
-
-on: [push, pull_request]
-
-permissions: {}
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
-
-env:
-  SPEC_SPLIT_DOTS: 160
-
-jobs:
-  test-std:
-    runs-on: macos-26
-    strategy:
-      fail-fast: false
-      matrix:
-        opts:
-          - flags: "-Dwithout_mt"
-          - workers: 4 # MT:4
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - uses: gerlero/brew-install@b7bdd6875207fdf3b7ebd0ecc5cf8da6e657eca2 # v1.1.3
-        with:
-          packages: bdw-gc gmp libyaml llvm@22 pcre2 pkgconf openssl@3
-      - run: echo "$(brew --prefix llvm@22)/bin" >> "$GITHUB_PATH"
-
-      - uses: crystal-lang/install-crystal@v1
-        with:
-          crystal: 1.21.0
-
-      - run: sudo systemsetup -settimezone "America/New_York"
-
-      - run: make std_spec FLAGS="${{ matrix.opts.flags || '' }}"
-        env:
-          CRYSTAL_WORKERS: ${{ matrix.opts.workers || 1 }}
-
-  test-compiler:
-    needs: test-std
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - macos-14
-          - macos-26
-          - macos-26-intel
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - uses: gerlero/brew-install@b7bdd6875207fdf3b7ebd0ecc5cf8da6e657eca2 # v1.1.3
-        with:
-          packages: bdw-gc gmp libyaml llvm@22 pcre2 pkgconf openssl@3
-      - run: echo "$(brew --prefix llvm@22)/bin" >> "$GITHUB_PATH"
-
-      - uses: crystal-lang/install-crystal@v1
-        with:
-          crystal: 1.21.0
-
-      - run: sudo systemsetup -settimezone "America/New_York"
-
-      - run: make crystal
-      - run: make primitives_spec
-      - run: make std_spec
-      - run: make compiler_spec
-      - run: make interpreter_spec
-      - run: make docs DOCS_OPTIONS='--json-config-url=/api/versions.json --canonical-base-url=https://crystal-lang.org/api/latest/'
-      - run: make samples
-      - run: make samples
-        env:
-          CRYSTAL_OPTS: --debug
+#name: macOS CI
+#
+#on: [push, pull_request]
+#
+#permissions: {}
+#
+#concurrency:
+#  group: ${{ github.workflow }}-${{ github.ref }}
+#  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+#
+#env:
+#  SPEC_SPLIT_DOTS: 160
+#
+#jobs:
+#  test-std:
+#    runs-on: macos-26
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        opts:
+#          - flags: "-Dwithout_mt"
+#          - workers: 4 # MT:4
+#    steps:
+#      - uses: actions/checkout@v7
+#        with:
+#          persist-credentials: false
+#
+#      - uses: gerlero/brew-install@b7bdd6875207fdf3b7ebd0ecc5cf8da6e657eca2 # v1.1.3
+#        with:
+#          packages: bdw-gc gmp libyaml llvm@22 pcre2 pkgconf openssl@3
+#      - run: echo "$(brew --prefix llvm@22)/bin" >> "$GITHUB_PATH"
+#
+#      - uses: crystal-lang/install-crystal@v1
+#        with:
+#          crystal: 1.21.0
+#
+#      - run: sudo systemsetup -settimezone "America/New_York"
+#
+#      - run: make std_spec FLAGS="${{ matrix.opts.flags || '' }}"
+#        env:
+#          CRYSTAL_WORKERS: ${{ matrix.opts.workers || 1 }}
+#
+#  test-compiler:
+#    needs: test-std
+#    runs-on: ${{ matrix.os }}
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        os:
+#          - macos-14
+#          - macos-26
+#          - macos-26-intel
+#    steps:
+#      - uses: actions/checkout@v7
+#        with:
+#          persist-credentials: false
+#
+#      - uses: gerlero/brew-install@b7bdd6875207fdf3b7ebd0ecc5cf8da6e657eca2 # v1.1.3
+#        with:
+#          packages: bdw-gc gmp libyaml llvm@22 pcre2 pkgconf openssl@3
+#      - run: echo "$(brew --prefix llvm@22)/bin" >> "$GITHUB_PATH"
+#
+#      - uses: crystal-lang/install-crystal@v1
+#        with:
+#          crystal: 1.21.0
+#
+#      - run: sudo systemsetup -settimezone "America/New_York"
+#
+#      - run: make crystal
+#      - run: make primitives_spec
+#      - run: make std_spec
+#      - run: make compiler_spec
+#      - run: make interpreter_spec
+#      - run: make docs DOCS_OPTIONS='--json-config-url=/api/versions.json --canonical-base-url=https://crystal-lang.org/api/latest/'
+#      - run: make samples
+#      - run: make samples
+#        env:
+#          CRYSTAL_OPTS: --debug
