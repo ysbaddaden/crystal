@@ -26,10 +26,13 @@ jobs:
         with:
           mem: 8192
           release: ${{ matrix.os_release }}
+          disable-cache: true
           envs: 'SPEC_SPLIT_DOTS TZ'
           prepare: |
+            set -eux
             pkg install -y boehm-gc-threaded crystal git gmake libxml2 libyaml openssl pcre2 pkgconf
             crystal version
+            crystal env
           run: |
             gmake std_spec
 
@@ -46,9 +49,12 @@ jobs:
         with:
           mem: 8192
           release: ${{ matrix.os_release }}
+          disable-cache: true
           envs: 'SPEC_SPLIT_DOTS TZ'
           prepare: |
+            set -eux
             pkg_add boehm-gc crystal git gmake gmp libxml libyaml pcre2
             crystal version
+            crystal env
           run: |
             gmake std_spec
