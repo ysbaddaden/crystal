@@ -13,8 +13,11 @@ env:
   TZ: America/New_York
 
 jobs:
-  freebsd-14:
+  freebsd:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os_release: ["14"]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -22,9 +25,30 @@ jobs:
       - uses: vmactions/freebsd-vm@f0552d3b69211736abd97f02ff3d4674c56b73b1 # v1.5.5
         with:
           mem: 8192
-          release: "14"
+          release: ${{ matrix.os_release }}
           envs: 'SPEC_SPLIT_DOTS TZ'
           prepare: |
-            pkg install -y crystal git gmake libxml2 openssl pcre2 pkgconf
+            pkg install -y boehm-gc-threaded crystal git gmake libxml2 libyaml openssl pcre2 pkgconf
+            crystal version
+          run: |
+            gmake std_spec
+
+  openbsd:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os_release: ["7.8"]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: vmactions/openbsd-vm@86cdc08415d9d0865267e686561e276c52d62530 # v1.4.7
+        with:
+          mem: 8192
+          release: ${{ matrix.os_release }}
+          envs: 'SPEC_SPLIT_DOTS TZ'
+          prepare: |
+            pkg_add -y boehm-gc crystal git gmake gmp libxml libyaml pcre2
+            crystal version
           run: |
             gmake std_spec
