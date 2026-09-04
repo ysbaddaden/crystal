@@ -32,7 +32,7 @@ jobs:
             set -eux
             pkg install -y boehm-gc-threaded crystal git gmake libxml2 libyaml openssl pcre2 pkgconf
             crystal version
-            crystal env
+            bin/crystal env
           run: |
             gmake std_spec
 
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os_release: ["7.8"]
+        os_release: ["7.9"]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -55,6 +55,6 @@ jobs:
             set -eux
             pkg_add boehm-gc crystal git gmake gmp libxml libyaml pcre2
             crystal version
-            crystal env
+            bin/crystal env
           run: |
             gmake std_spec
