@@ -48,7 +48,7 @@ jobs:
           release: ${{ matrix.os_release }}
           envs: 'SPEC_SPLIT_DOTS TZ'
           prepare: |
-            pkg_add -y boehm-gc crystal git gmake gmp libxml libyaml pcre2
+            pkg_add boehm-gc crystal git gmake gmp libxml libyaml pcre2
             crystal version
           run: |
             gmake std_spec
