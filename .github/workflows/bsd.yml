@@ -32,7 +32,6 @@ jobs:
             set -eux
             pkg install -y boehm-gc-threaded crystal git gmake libxml2 libyaml openssl pcre2 pkgconf
             crystal version
-            bin/crystal env
           run: |
             gmake std_spec
 
@@ -55,6 +54,5 @@ jobs:
             set -eux
             pkg_add boehm-gc crystal git gmake gmp libxml libyaml pcre2
             crystal version
-            bin/crystal env
           run: |
-            gmake std_spec
+            gmake std_spec CRYSTAL=/usr/local/libexec/crystal
