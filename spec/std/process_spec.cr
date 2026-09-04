@@ -625,14 +625,8 @@ describe Process do
           Dir.mkdir dir
           File.write(Path[dir, "foo"], "#!/bin/sh\necho bar")
           File.chmod(Path[dir, "foo"], 0o555)
-          if {{ flag?(:darwin) }}
-            String.build do |io|
-              Process.run("foo", chdir: dir, output: io)
-            end.should eq "bar\n"
-          else
-            expect_raises(File::NotFoundError) do
-              Process.run("foo", chdir: dir)
-            end
+          expect_raises(File::NotFoundError) do
+            Process.run("foo", chdir: dir)
           end
         end
       end
