@@ -25,6 +25,6 @@ jobs:
           release: "14"
           envs: 'SPEC_SPLIT_DOTS TZ'
           prepare: |
-            sudo pkg install -y crystal git gmake libxml2 openssl pcre2 pkgconf
+            pkg install -y crystal git gmake libxml2 openssl pcre2 pkgconf
           run: |
             gmake std_spec
