@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os_release: ["7.9"]
+        os_release: ["7.8"]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -55,4 +55,5 @@ jobs:
             pkg_add boehm-gc crystal git gmake gmp libxml libyaml pcre2
             crystal version
           run: |
+            export LD_LIBRARY_PATH="/usr/local/llvm19/lib"
             gmake std_spec CRYSTAL=/usr/local/libexec/crystal
