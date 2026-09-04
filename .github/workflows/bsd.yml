@@ -55,5 +55,7 @@ jobs:
             pkg_add boehm-gc crystal git gmake gmp libxml libyaml pcre2
             crystal version
           run: |
-            export LD_LIBRARY_PATH="/usr/local/llvm19/lib"
+            set -eux
+            export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(ls /usr/local/llvm* | sort -V | tail -n 1)/lib"
+            echo $LD_LIBRARY_PATH
             gmake std_spec CRYSTAL=/usr/local/libexec/crystal
