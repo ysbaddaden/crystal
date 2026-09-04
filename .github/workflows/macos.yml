@@ -10,50 +10,8 @@ concurrency:
 
 env:
   SPEC_SPLIT_DOTS: 160
-  CI_NIX_SHELL: true
 
 jobs:
-  darwin-test:
-    runs-on: ${{ matrix.runs-on }}
-    name: "${{ matrix.runs-on }} (${{ matrix.arch }})"
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-        - runs-on: macos-26-intel
-          arch: x86_64-darwin
-        - runs-on: macos-14
-          arch: aarch64-darwin
-        - runs-on: macos-26
-          arch: aarch64-darwin
-    steps:
-      - name: Download Crystal source
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command
-
-      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
-        with:
-          name: crystal-ci
-          signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
-
-      - name: Prepare System
-        run: bin/ci prepare_system
-
-      - name: Prepare Build
-        run: bin/ci prepare_build
-
-      - name: Test
-        run: bin/ci build
-
-      - name: Test interpreter
-        run: bin/ci with_build_env 'make interpreter_spec'
-
   test-std:
     runs-on: macos-26
     strategy:
@@ -61,28 +19,60 @@ jobs:
       matrix:
         opts:
           - flags: "-Dwithout_mt"
-          - workers: 4 # execution_context: parallel
+          - workers: 4 # MT:4
     steps:
-      - name: Download Crystal source
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - uses: gerlero/brew-install@b7bdd6875207fdf3b7ebd0ecc5cf8da6e657eca2 # v1.1.3
         with:
-          extra_nix_config: |
-            experimental-features = nix-command
+          packages: bdw-gc gmp libyaml llvm@22 pcre2 pkgconf openssl@3
+      - run: echo "$(brew --prefix llvm@22)/bin" >> "$GITHUB_PATH"
 
-      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+      - uses: crystal-lang/install-crystal@v1
         with:
-          name: crystal-ci
-          signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
+          crystal: 1.21.0
 
-      - name: Prepare System
-        run: bin/ci prepare_system
+      - run: sudo systemsetup -settimezone "America/New_York"
 
-      - name: Prepare Build
-        run: bin/ci prepare_build
+      - run: make std_spec FLAGS="${{ matrix.opts.flags || '' }}"
+        env:
+          CRYSTAL_WORKERS: ${{ matrix.opts.workers || 1 }}
 
-      - name: Test
-        run: bin/ci with_build_env 'CRYSTAL_WORKERS=${{ matrix.opts.workers || 1 }} make std_spec threads=1 FLAGS="${{ matrix.opts.flags || '' }}"'
+  test-compiler:
+    needs: test-std
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-14
+          - macos-26
+          - macos-26-intel
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: gerlero/brew-install@b7bdd6875207fdf3b7ebd0ecc5cf8da6e657eca2 # v1.1.3
+        with:
+          packages: bdw-gc gmp libyaml llvm@22 pcre2 pkgconf openssl@3
+      - run: echo "$(brew --prefix llvm@22)/bin" >> "$GITHUB_PATH"
+
+      - uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: 1.21.0
+
+      - run: sudo systemsetup -settimezone "America/New_York"
+
+      - run: make crystal
+      - run: make primitives_spec
+      - run: make std_spec
+      - run: make compiler_spec
+      - run: make interpreter_spec
+      - run: make docs DOCS_OPTIONS='--json-config-url=/api/versions.json --canonical-base-url=https://crystal-lang.org/api/latest/'
+      - run: make samples
+      - run: make samples
+        env:
+          CRYSTAL_OPTS: --debug
