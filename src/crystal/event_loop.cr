@@ -12,6 +12,8 @@ abstract class Crystal::EventLoop
         end
       {% elsif flag?("evloop=libevent") %}
         Crystal::EventLoop::LibEvent
+      # The native async solution on Solaris (Illumos) are Event Ports, but both
+      # `epoll` and `timerfd` are supported, and the epoll event loop works.
       {% elsif flag?("evloop=epoll") || flag?(:android) || flag?(:linux) || flag?(:solaris) %}
         Crystal::EventLoop::Epoll
       {% elsif flag?("evloop=kqueue") || flag?(:darwin) || flag?(:freebsd) || flag?(:openbsd) %}
