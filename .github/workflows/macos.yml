@@ -47,7 +47,7 @@ jobs:
     #needs: test-std
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os:
           - macos-14
@@ -73,6 +73,17 @@ jobs:
 
       #- run: make crystal
       #- run: make primitives_spec
+      - run: make .build/std_spec FLAGS=-Dtracing
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
       - run: make std_spec
       - run: make std_spec
       - run: make std_spec
