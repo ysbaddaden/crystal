@@ -22,14 +22,17 @@ class Fiber
         end
 
         def wake
+          Crystal.trace :thread, "wake", thread: @thread
           @condition_variable.signal
         end
 
         def wait
+          Crystal.trace :thread, "wait"
           @condition_variable.wait(@mutex)
         end
 
         def wait(timeout, &)
+          Crystal.trace :thread, "wait", timeout: timeout
           @condition_variable.wait(@mutex, timeout) { yield }
         end
 
