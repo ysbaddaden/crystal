@@ -183,6 +183,8 @@ class Fiber
 
             Crystal.print_error_buffered("BUG: %s#enter_thread_loop crashed",
               self.class.name, exception: exception)
+
+            LibC.exit(1)
           end
         end
       end
