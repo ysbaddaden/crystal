@@ -74,6 +74,15 @@ jobs:
       #- run: make crystal
       #- run: make primitives_spec
       - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
+      - run: make std_spec
       #- run: make compiler_spec
       #- run: make interpreter_spec
       #- run: make docs DOCS_OPTIONS='--json-config-url=/api/versions.json --canonical-base-url=https://crystal-lang.org/api/latest/'
