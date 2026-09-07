@@ -80,9 +80,11 @@ class Fiber
         detach(thread)
 
         if thread == @main_thread
+          thread.internal_name = "MAIN"
           resume(main_thread_loop)
         else
           Thread.name = ""
+          thread.internal_name = ""
           resume(thread.main_fiber)
         end
       end
@@ -110,7 +112,9 @@ class Fiber
         parked.synchronize do
           loop do
             if scheduler = thread.scheduler?
-              unless thread == @main_thread
+              if thread == @main_thread
+                thread.internal_name = scheduler.name
+              else
                 Thread.name = scheduler.name
               end
 
