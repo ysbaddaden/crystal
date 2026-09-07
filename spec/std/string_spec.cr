@@ -3011,6 +3011,7 @@ describe "String" do
       {% end %}
 
       it "decodes with skip" do
+        {% if flag?(:darwin) %} pending! "fails on macOS 15+" {% end %}
         bytes = Bytes[186, 195, 255, 202, 199]
         String.new(bytes, "EUC-JP", invalid: :skip).should eq("挫頁")
       end

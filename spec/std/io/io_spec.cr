@@ -760,6 +760,7 @@ describe IO do
         end
 
         it "skips invalid byte sequences" do
+          {% if flag?(:darwin) %} pending! "fails on macOS 15+" {% end %}
           string = String.build do |str|
             str.write "好".encode("EUC-JP")
             str.write_byte 255_u8
