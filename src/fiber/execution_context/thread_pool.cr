@@ -40,7 +40,6 @@ class Fiber
 
       def initialize
         @mutex = Thread::Mutex.new
-        @condition_variable = Thread::ConditionVariable.new
         @pool = Crystal::PointerLinkedList(Parked).new
         @main_thread = Thread.current
       end
