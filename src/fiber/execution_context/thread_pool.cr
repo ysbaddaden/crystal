@@ -47,6 +47,7 @@ class Fiber
       protected def checkout(scheduler)
         thread =
           if parked = @mutex.synchronize { @pool.shift? }
+            Crystal.trace :thread, "pool.shift", thread: parked.value.thread
             parked.value.synchronize do
               attach(parked.value.thread, scheduler)
               parked.value.wake
@@ -55,11 +56,12 @@ class Fiber
           else
             # OPTIMIZE: start thread with minimum stack size
             Thread.new do |thread|
+              Crystal.trace :thread, "start", thread: thread
               attach(thread, scheduler)
               enter_thread_loop(thread)
             end
           end
-        Crystal.trace :sched, "thread.checkout", thread: thread
+        Crystal.trace :thread, "checkout", thread: thread
         thread
       end
 
@@ -75,8 +77,8 @@ class Fiber
       end
 
       protected def checkin : Nil
-        Crystal.trace :sched, "thread.checkin"
         thread = Thread.current
+        Crystal.trace :thread, "checkin", thread: thread
         detach(thread)
 
         if thread == @main_thread
@@ -109,6 +111,7 @@ class Fiber
       # isolated context).
       private def enter_thread_loop(thread)
         parked = Parked.new(thread)
+
         parked.synchronize do
           loop do
             if scheduler = thread.scheduler?
@@ -135,6 +138,7 @@ class Fiber
               # (Darwin targets at least), so we make sure to only add the
               # thread to the pool once:
               unless parked.linked?
+                Crystal.trace :thread, "pool.push", thread: parked.thread
                 @pool.push pointerof(parked)
               end
             end
@@ -157,6 +161,7 @@ class Fiber
 
                   @mutex.synchronize do
                     if parked.linked?
+                      Crystal.trace :thread, "pool.delete", thread: parked.thread
                       @pool.delete pointerof(parked)
                       deleted = true
                     end
@@ -165,7 +170,7 @@ class Fiber
                   if deleted
                     # no attached scheduler and we removed ourselves from the
                     # pool: we can safely shutdown (no races)
-                    Crystal.trace :sched, "thread.shutdown"
+                    Crystal.trace :thread, "shutdown", thread: parked.thread
                     return
                   end
 
@@ -177,7 +182,7 @@ class Fiber
               end
             end
           rescue exception
-            Crystal.trace :sched, "thread.exception",
+            Crystal.trace :thread, "exception",
               class: exception.class.name,
               message: exception.message
 
@@ -190,7 +195,7 @@ class Fiber
       end
 
       private def resume(fiber) : Nil
-        Crystal.trace :sched, "thread.resume", fiber: fiber
+        Crystal.trace :thread, "resume", fiber: fiber
 
         # FIXME: duplicates Fiber::ExecutionContext::MultiThreaded::Scheduler#resume:
         attempts = 0
