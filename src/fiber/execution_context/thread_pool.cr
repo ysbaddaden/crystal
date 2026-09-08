@@ -23,18 +23,25 @@ class Fiber
 
         def wake
           Crystal.trace :thread, "wake", thread: @thread
-          @condition_variable.signal
+          # @condition_variable.signal
+          @thread.wake
         end
 
         def wait
           Crystal.trace :thread, "wait"
-          @condition_variable.wait(@mutex)
+          # @condition_variable.wait(@mutex)
+          @mutex.unlock
+          begin
+            @thread.wait
+          ensure
+            @mutex.lock
+          end
         end
 
-        def wait(timeout, &)
-          Crystal.trace :thread, "wait", timeout: timeout
-          @condition_variable.wait(@mutex, timeout) { yield }
-        end
+        # def wait(timeout, &)
+        #   Crystal.trace :thread, "wait", timeout: timeout
+        #   @condition_variable.wait(@mutex, timeout) { yield }
+        # end
 
         def linked?
           !@previous.null?
@@ -146,44 +153,47 @@ class Fiber
               end
             end
 
-            if thread == @main_thread || {% flag?(:win32) && Crystal::EventLoop.has_constant?(:IOCP) %}
-              # never shutdown the main thread: the main fiber is running on its
-              # original stack, terminating the main thread would invalidate the
-              # main fiber stack (oops)
-              #
-              # FIXME: never shutdown a thread on windows: it would abort pending I/O
-              # operations (for example `Socket#accept`) that the thread started
-              parked.wait
-            else
-              parked.wait(ExecutionContext.thread_keepalive) do
-                # reached timeout: try to shutdown thread, but another thread
-                # might dequeue from @pool in parallel: run checks to avoid any
-                # race condition:
-                if !thread.scheduler? && parked.linked?
-                  deleted = false
+            parked.wait
 
-                  @mutex.synchronize do
-                    if parked.linked?
-                      Crystal.trace :thread, "pool.delete", thread: parked.thread
-                      @pool.delete pointerof(parked)
-                      deleted = true
-                    end
-                  end
+            # if thread == @main_thread || {% flag?(:win32) && Crystal::EventLoop.has_constant?(:IOCP) %}
+            #   # never shutdown the main thread: the main fiber is running on its
+            #   # original stack, terminating the main thread would invalidate the
+            #   # main fiber stack (oops)
+            #   #
+            #   # FIXME: never shutdown a thread on windows: it would abort pending I/O
+            #   # operations (for example `Socket#accept`) that the thread started
+            #   parked.wait
+            # else
+            #   parked.wait(ExecutionContext.thread_keepalive) do
+            #     # reached timeout: try to shutdown thread, but another thread
+            #     # might dequeue from @pool in parallel: run checks to avoid any
+            #     # race condition:
+            #     if !thread.scheduler? && parked.linked?
+            #       deleted = false
 
-                  if deleted
-                    # no attached scheduler and we removed ourselves from the
-                    # pool: we can safely shutdown (no races)
-                    Crystal.trace :thread, "shutdown", thread: parked.thread
-                    return
-                  end
+            #       @mutex.synchronize do
+            #         if parked.linked?
+            #           Crystal.trace :thread, "pool.delete", thread: parked.thread
+            #           @pool.delete pointerof(parked)
+            #           deleted = true
+            #         end
+            #       end
 
-                  # no attached scheduler but another thread removed ourselves
-                  # from the pool and is waiting to acquire parked.mutex to
-                  # handoff a scheduler: unsync so it can progress
-                  parked.wait
-                end
-              end
-            end
+            #       if deleted
+            #         # no attached scheduler and we removed ourselves from the
+            #         # pool: we can safely shutdown (no races)
+            #         Crystal.trace :thread, "shutdown", thread: parked.thread
+            #         return
+            #       end
+
+            #       # no attached scheduler but another thread removed ourselves
+            #       # from the pool and is waiting to acquire parked.mutex to
+            #       # handoff a scheduler: unsync so it can progress
+            #       parked.wait
+            #     end
+            #   end
+            # end
+
           rescue exception
             Crystal.trace :thread, "exception",
               class: exception.class.name,
