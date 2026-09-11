@@ -13,12 +13,7 @@ class Fiber
         getter thread : Thread
 
         def initialize(@thread : Thread)
-          @mutex = Thread::Mutex.new
           @condition_variable = Thread::ConditionVariable.new
-        end
-
-        def synchronize(&)
-          @mutex.synchronize { yield }
         end
 
         def wake
@@ -26,18 +21,14 @@ class Fiber
           @condition_variable.signal
         end
 
-        def wait
+        def wait(mutex)
           Crystal.trace :thread, "wait"
-          @condition_variable.wait(@mutex)
+          @condition_variable.wait(mutex)
         end
 
-        def wait(timeout, &)
-          Crystal.trace :thread, "wait", timeout: timeout
-          @condition_variable.wait(@mutex, timeout) { yield }
-        end
-
-        def linked?
-          !@previous.null?
+        def wait(mutex, timeout, &)
+          Crystal.trace :thread, "wait", timeout: timeout.to_nanoseconds
+          @condition_variable.wait(mutex, timeout) { yield }
         end
       end
 
@@ -48,22 +39,25 @@ class Fiber
       end
 
       protected def checkout(scheduler)
-        thread =
-          if parked = @mutex.synchronize { @pool.shift? }
-            Crystal.trace :thread, "pool.shift", thread: parked.value.thread
-            parked.value.synchronize do
-              attach(parked.value.thread, scheduler)
-              parked.value.wake
-            end
-            parked.value.thread
-          else
-            # OPTIMIZE: start thread with minimum stack size
-            Thread.new do |thread|
-              Crystal.trace :thread, "start", thread: thread
-              attach(thread, scheduler)
-              enter_thread_loop(thread)
-            end
+        thread = nil
+
+        @mutex.synchronize do
+          if parked = @pool.shift?
+            thread = parked.value.thread
+            Crystal.trace :thread, "pool.shift", thread: thread
+
+            attach(thread, scheduler)
+            parked.value.wake
           end
+        end
+
+        thread ||= Thread.new do |thread|
+          Crystal.trace :thread, "start"
+
+          attach(thread, scheduler)
+          enter_thread_loop(thread)
+        end
+
         Crystal.trace :thread, "checkout", thread: thread
         thread
       end
@@ -80,21 +74,20 @@ class Fiber
       end
 
       protected def checkin : Nil
+        Crystal.trace :thread, "checkin"
+
         thread = Thread.current
-        Crystal.trace :thread, "checkin", thread: thread
         detach(thread)
 
-        if thread == @main_thread
-          thread.internal_name = "MAIN"
-        else
-          Thread.name = ""
-          thread.internal_name = ""
-        end
+        Thread.name = "" unless thread == @main_thread
+        thread.internal_name = "?"
 
         resume(thread.main_fiber)
       end
 
       def enter_main_thread_loop(fiber : Fiber) : Nil
+        Crystal.trace :thread, "main"
+
         # switch execution to the main user code fiber
         resume(fiber)
 
@@ -115,86 +108,86 @@ class Fiber
       private def enter_thread_loop(thread)
         parked = Parked.new(thread)
 
-        parked.synchronize do
-          loop do
-            if scheduler = thread.scheduler?
-              if thread == @main_thread
-                thread.internal_name = scheduler.name
-              else
-                Thread.name = scheduler.name
-              end
+        while true
+          scheduler = wait_for_scheduler?(thread, pointerof(parked))
+          return unless scheduler
 
-              resume(scheduler.main_fiber)
+          Thread.name = scheduler.name unless thread == @main_thread
+          thread.internal_name = scheduler.name
 
-              {% unless flag?(:interpreted) %}
-                if (stack = Thread.current.dead_fiber_stack?) && stack.reusable?
-                  # release pending fiber stack left after swapcontext; we don't
-                  # know which stack pool to return it to, and it may not even
-                  # have one (e.g. isolated fiber stack)
-                  Crystal::System::Fiber.free_stack(stack.pointer, stack.size)
+          resume(scheduler.main_fiber)
+
+          {% unless flag?(:interpreted) %}
+            if (stack = Thread.current.dead_fiber_stack?) && stack.reusable?
+              # release pending fiber stack left after swapcontext; we don't
+              # know which stack pool to return it to, and it may not even
+              # have one (e.g. isolated fiber stack)
+              Crystal::System::Fiber.free_stack(stack.pointer, stack.size)
+            end
+          {% end %}
+        end
+      rescue exception
+        Crystal.trace :thread, "exception", class: exception.class.name, message: exception.message
+
+        # panic: the thread loop crashing is an unexpected runtime error
+        Crystal.print_error_buffered("BUG: %s#enter_thread_loop crashed", self.class.name, exception: exception)
+        LibC.exit(1)
+      end
+
+      private def wait_for_scheduler?(thread, parked)
+        # usually empty, save for the first iteration of a new thread
+        if scheduler = thread.scheduler?
+          return scheduler
+        end
+
+        @mutex.synchronize do
+          # always empty, but quick check just in case
+          if scheduler = thread.scheduler?
+            return scheduler
+          end
+
+          Crystal.trace :thread, "pool.push"
+          @pool.push(parked)
+
+          while true
+            if can_terminate?(thread)
+              parked.value.wait(@mutex, ExecutionContext.thread_keepalive) do
+                Crystal.trace :thread, "timeout"
+
+                # reached timeout: synchronize with #checkout
+                if scheduler = thread.scheduler?
+                  return scheduler
                 end
-              {% end %}
-            end
 
-            @mutex.synchronize do
-              # pthread_cond_wait happens to return zero without being signaled
-              # (Darwin targets at least), so we make sure to only add the
-              # thread to the pool once:
-              unless parked.linked?
-                Crystal.trace :thread, "pool.push", thread: parked.thread
-                @pool.push pointerof(parked)
+                # no race: cleanup and terminate
+                Crystal.trace :thread, "pool.delete"
+                @pool.delete(parked)
+                return
               end
-            end
-
-            if thread == @main_thread || {% flag?(:win32) && Crystal::EventLoop.has_constant?(:IOCP) %}
-              # never shutdown the main thread; while the main user code runs in
-              # a distinct fiber, it's probably not a good idea to have the main
-              # thread terminate.
-              #
-              # FIXME: never shutdown a thread on windows: it would abort pending I/O
-              # operations (for example `Socket#accept`) that the thread started
-              parked.wait
             else
-              parked.wait(ExecutionContext.thread_keepalive) do
-                # reached timeout: try to shutdown thread, but another thread
-                # might dequeue from @pool in parallel: run checks to avoid any
-                # race condition:
-                if !thread.scheduler? && parked.linked?
-                  deleted = false
-
-                  @mutex.synchronize do
-                    if parked.linked?
-                      Crystal.trace :thread, "pool.delete", thread: parked.thread
-                      @pool.delete pointerof(parked)
-                      deleted = true
-                    end
-                  end
-
-                  if deleted
-                    # no attached scheduler and we removed ourselves from the
-                    # pool: we can safely shutdown (no races)
-                    Crystal.trace :thread, "shutdown", thread: parked.thread
-                    return
-                  end
-
-                  # no attached scheduler but another thread removed ourselves
-                  # from the pool and is waiting to acquire parked.mutex to
-                  # handoff a scheduler: unsync so it can progress
-                  parked.wait
-                end
-              end
+              parked.value.wait(@mutex)
             end
-          rescue exception
-            Crystal.trace :thread, "exception",
-              class: exception.class.name,
-              message: exception.message
 
-            Crystal.print_error_buffered("BUG: %s#enter_thread_loop crashed",
-              self.class.name, exception: exception)
-
-            LibC.exit(1)
+            if scheduler = thread.scheduler?
+              return scheduler
+            end
           end
         end
+      end
+
+      private def can_terminate?(thread)
+        {% if flag?(:win32) || Crystal::EventLoop.has_constant?(:IOCP) %}
+          # never shutdown a thread on windows: it would abort pending I/O
+          # operations (for example `Socket#accept`) that the thread has started
+          #
+          # TODO: keep an async operation counter on the thread, so we may
+          # eventually terminate the thread (check on every keepalive timeout)
+          false
+        {% else %}
+          # never shutdown the main thread: the process would exit immediately
+          # while the main user code fiber is still running
+          thread != @main_thread
+        {% end %}
       end
 
       private def resume(fiber) : Nil
