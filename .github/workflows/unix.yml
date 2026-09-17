@@ -9,8 +9,9 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 env:
-  SPEC_SPLIT_DOTS: "80"
   CRYSTAL_BOOTSTRAP_VERSION: "1.21.0"
+  SPEC_SPLIT_DOTS: "80"
+  TZ: "America/New_York"
 
 jobs:
   test-std:
@@ -38,13 +39,13 @@ jobs:
           persist-credentials: false
 
       - name: Start VM
-        uses: cross-platform-actions/action@v1.6.0
+        uses: cross-platform-actions/action@e0b9770014ba65d5e0815f15b74031c3a635f641 # v1.6.0
         with:
           operating_system: ${{matrix.os.name}}
           architecture: ${{matrix.os.arch}}
           version: ${{matrix.os.version}}
           memory: 8G
-          environment_variables: SPEC_SPLIT_DOTS CRYSTAL_BOOTSTRAP_VERSION
+          environment_variables: CRYSTAL_BOOTSTRAP_VERSION SPEC_SPLIT_DOTS TZ
 
       - name: Setup VM
         run: |
@@ -53,6 +54,7 @@ jobs:
               sudo pkg install -y git gmake pkgconf boehm-gc-threaded gmp libxml2 libyaml llvm22 openssl pcre2
               ;;
             netbsd)
+              echo https://cdn.netbsd.org/pub/pkgsrc/packages/NetBSD/${{matrix.os.arch}}/${{matrix.os.version}}/All | sudo tee /usr/pkg/etc/pkgin/repositories.conf
               sudo pkgin -y install git gmake pkgconf boehm-gc gmp libxml2 libyaml lld llvm openssl pcre2
               ;;
           esac
@@ -60,6 +62,7 @@ jobs:
       - name: Install Crystal
         run: |
           curl -sL "https://crystal.s3.gra.io.cloud.ovh.net/crystal-${CRYSTAL_BOOTSTRAP_VERSION}-1-${{matrix.os.name}}-${{matrix.os.arch}}.tar.xz" | tar -C /tmp -xJf -
+          sudo mkdir -p /usr/local/bin
           sudo ln -s /tmp/crystal-${CRYSTAL_BOOTSTRAP_VERSION}/bin/crystal /usr/local/bin/crystal
           crystal version
           crystal env
