@@ -59,12 +59,13 @@ jobs:
 
       - name: Install Crystal
         run: |
-          curl -sL "https://public.portalier.com/crystal/crystal-${CRYSTAL_BOOTSTRAP_VERSION}-1-${{matrix.os.name}}-${{matrix.os.arch}}.tar.xz" | tar -C /tmp -xJf -
+          curl -sL "https://crystal.s3.gra.io.cloud.ovh.net/crystal-${CRYSTAL_BOOTSTRAP_VERSION}-1-${{matrix.os.name}}-${{matrix.os.arch}}.tar.xz" | tar -C /tmp -xJf -
+          echo "export PATH=$PATH:/tmp/crystal-${CRYSTAL_BOOTSTRAP_VERSION}/bin" | sudo tee -a /etc/profile
           /tmp/crystal-${CRYSTAL_BOOTSTRAP_VERSION}/bin/crystal version
           /tmp/crystal-${CRYSTAL_BOOTSTRAP_VERSION}/bin/crystal env
         shell: cpa.sh {0}
 
       - name: Test
-        run: gmake std_spec CRYSTAL="/tmp/crystal-${CRYSTAL_BOOTSTRAP_VERSION}/bin/crystal"
+        run: gmake std_spec
         shell: cpa.sh {0}
 
