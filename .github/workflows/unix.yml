@@ -15,6 +15,7 @@ env:
 jobs:
   test-std:
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
@@ -62,10 +63,13 @@ jobs:
               pkgin install boehm-gc gmp libxml2 libyaml lld llvm openssl pcre2
               ;;
           esac
+        shell: cpa.sh {0}
 
       - name: Install Crystal
         run: curl -sL "https://public.portalier.com/crystal/crystal-${CRYSTAL_BOOTSTRAP_VERSION}-1-${{matrix.os.name}}-${{matrix.os.arch}}.tar.xz" | tar -xJf -
+        shell: cpa.sh {0}
 
       - name: Test
         run: gmake std_spec CRYSTAL="crystal-${version}/bin/crystal"
+        shell: cpa.sh {0}
 
