@@ -62,6 +62,6 @@ jobs:
         shell: cpa.sh {0}
 
       - name: Test
-        run: gmake std_spec CRYSTAL="crystal-${version}/bin/crystal"
+        run: gmake std_spec CRYSTAL="crystal-${CRYSTAL_BOOTSTRAP_VERSION}/bin/crystal"
         shell: cpa.sh {0}
 
