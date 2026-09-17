@@ -16,6 +16,10 @@ jobs:
   test-std:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        shell: "cpa.sh {0}"
+
     strategy:
       fail-fast: false
       matrix:
@@ -40,38 +44,26 @@ jobs:
           architecture: ${{matrix.os.arch}}
           version: ${{matrix.os.version}}
           memory: 8G
-          # shell: bash
           environment_variables: SPEC_SPLIT_DOTS CRYSTAL_BOOTSTRAP_VERSION
 
-      #- name: Setup VM
-      #  run: |
-      #    case "${{matrix.os.name}}" in
-      #      freebsd)
-      #        sudo pkg install -y git gmake pkgconf
-      #        sudo pkg install -y boehm-gc-threaded gmp libxml2 libyaml llvm22 openssl pcre2
-      #        ;;
-      #      netbsd)
-      #        sudo pkgin -y install git gmake pkgconf
-      #        sudo pkgin -y install boehm-gc gmp libxml2 libyaml lld llvm openssl pcre2
-      #        ;;
-      #    esac
-      #  shell: cpa.sh {0}
+      - name: Setup VM
+        run: |
+          case "${{matrix.os.name}}" in
+            freebsd)
+              sudo pkg install -y git gmake pkgconf boehm-gc-threaded gmp libxml2 libyaml llvm22 openssl pcre2
+              ;;
+            netbsd)
+              sudo pkgin -y install git gmake pkgconf boehm-gc gmp libxml2 libyaml lld llvm openssl pcre2
+              ;;
+          esac
 
       - name: Install Crystal
         run: |
-          # curl -sL "https://crystal.s3.gra.io.cloud.ovh.net/crystal-${CRYSTAL_BOOTSTRAP_VERSION}-1-${{matrix.os.name}}-${{matrix.os.arch}}.tar.xz" | tar -C /tmp -xJf -
-          echo "export PATH=$PATH:/tmp/crystal-${CRYSTAL_BOOTSTRAP_VERSION}/bin" | sudo tee -a /etc/profile
-          # /tmp/crystal-${CRYSTAL_BOOTSTRAP_VERSION}/bin/crystal version
-          # /tmp/crystal-${CRYSTAL_BOOTSTRAP_VERSION}/bin/crystal env
-        shell: cpa.sh {0}
+          curl -sL "https://crystal.s3.gra.io.cloud.ovh.net/crystal-${CRYSTAL_BOOTSTRAP_VERSION}-1-${{matrix.os.name}}-${{matrix.os.arch}}.tar.xz" | tar -C /tmp -xJf -
+          sudo ln -s /tmp/crystal-${CRYSTAL_BOOTSTRAP_VERSION}/bin/crystal /usr/local/bin/crystal
+          crystal version
+          crystal env
 
-      - run: cat /etc/profile
-        shell: cpa.sh {0}
-
-      - run: echo $PATH
-        shell: cpa.sh {0}
-
-      #- name: Test
-      #  run: gmake std_spec
-      #  shell: cpa.sh {0}
+      - name: Test
+        run: gmake std_spec
 
