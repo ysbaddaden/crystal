@@ -40,7 +40,7 @@ jobs:
           architecture: ${{matrix.os.arch}}
           version: ${{matrix.os.version}}
           memory: 8G
-          shell: bash
+          # shell: bash
           environment_variables: SPEC_SPLIT_DOTS CRYSTAL_BOOTSTRAP_VERSION
 
       #- name: Setup VM
