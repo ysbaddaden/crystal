@@ -1,0 +1,71 @@
+name: UNIX CI
+
+on: [push, pull_request]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+env:
+  SPEC_SPLIT_DOTS: "80"
+  CRYSTAL_BOOTSTRAP_VERSION: "1.21.0"
+
+jobs:
+  test-std:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - name: dragonflybsd
+            arch: x86_64
+            version: "6.4.2"
+
+          - name: freebsd
+            arch: x86_64
+            version: "14.5"
+
+          - name: netbsd
+            arch: x86_64
+            version: "10.1"
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Start VM
+        uses: cross-platform-actions/action@v1.6.0
+        with:
+          operating_system: ${{matrix.os.name}}
+          architecture: ${{matrix.os.arch}}
+          version: ${{matrix.os.version}}
+          memory: 8G
+          shell: bash
+          environment_variables: SPEC_SPLIT_DOTS CRYSTAL_BOOTSTRAP_VERSION
+
+      - name: Setup VM
+        run: |
+          case "${{matrix.os.name}}" in
+            dragonflybsd)
+              pkg install -y git gmake pkgconf
+              pkg install -y boehm-gc-threaded gmp libxml2 libyaml llvm20 openssl pcre2
+              ;;
+            freebsd)
+              pkg install -y git gmake pkgconf
+              pkg install -y boehm-gc-threaded gmp libxml2 libyaml llvm22 openssl pcre2
+              ;;
+            netbsd)
+              pkgin install git gmake pkgconf
+              pkgin install boehm-gc gmp libxml2 libyaml lld llvm openssl pcre2
+              ;;
+          esac
+
+      - name: Install Crystal
+        run: curl -sL "https://public.portalier.com/crystal/crystal-${CRYSTAL_BOOTSTRAP_VERSION}-1-${{matrix.os.name}}-${{matrix.os.arch}}.tar.xz" | tar -xJf -
+
+      - name: Test
+        run: gmake std_spec CRYSTAL="crystal-${version}/bin/crystal"
+
