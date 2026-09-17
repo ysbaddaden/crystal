@@ -20,10 +20,6 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - name: dragonflybsd
-            arch: x86_64
-            version: "6.4.2"
-
           - name: freebsd
             arch: x86_64
             version: "14.5"
@@ -50,10 +46,6 @@ jobs:
       - name: Setup VM
         run: |
           case "${{matrix.os.name}}" in
-            dragonflybsd)
-              sudo pkg install -y git gmake pkgconf
-              sudo pkg install -y boehm-gc-threaded gmp libxml2 libyaml llvm20 openssl pcre2
-              ;;
             freebsd)
               sudo pkg install -y git gmake pkgconf
               sudo pkg install -y boehm-gc-threaded gmp libxml2 libyaml llvm22 openssl pcre2
