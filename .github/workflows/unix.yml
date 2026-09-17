@@ -51,16 +51,16 @@ jobs:
         run: |
           case "${{matrix.os.name}}" in
             dragonflybsd)
-              pkg install -y git gmake pkgconf
-              pkg install -y boehm-gc-threaded gmp libxml2 libyaml llvm20 openssl pcre2
+              sudo pkg install -y git gmake pkgconf
+              sudo pkg install -y boehm-gc-threaded gmp libxml2 libyaml llvm20 openssl pcre2
               ;;
             freebsd)
-              pkg install -y git gmake pkgconf
-              pkg install -y boehm-gc-threaded gmp libxml2 libyaml llvm22 openssl pcre2
+              sudo pkg install -y git gmake pkgconf
+              sudo pkg install -y boehm-gc-threaded gmp libxml2 libyaml llvm22 openssl pcre2
               ;;
             netbsd)
-              pkgin install git gmake pkgconf
-              pkgin install boehm-gc gmp libxml2 libyaml lld llvm openssl pcre2
+              sudo pkgin install git gmake pkgconf
+              sudo pkgin install boehm-gc gmp libxml2 libyaml lld llvm openssl pcre2
               ;;
           esac
         shell: cpa.sh {0}
