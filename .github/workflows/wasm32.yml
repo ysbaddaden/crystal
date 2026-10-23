@@ -85,4 +85,4 @@ jobs:
 
       - name: "Run wasm32_std_spec.wasm"
         run: |
-          wasmtime run wasm32_std_spec.wasm
+          wasmtime run --dir . wasm32_std_spec.wasm
