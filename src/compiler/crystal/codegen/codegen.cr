@@ -285,6 +285,15 @@ module Crystal
                    @frame_pointers : FramePointers = :auto,
                    @llvm_context : LLVM::Context = LLVM::Context.new,
                    main_returns_value : Bool = false)
+      if @program.codegen_target.wasm?
+        if @debug == Debug::Default
+          # don't generate DWARF by default on WASM
+          @debug = Debug::WASMLineNumbers
+        elsif @debug.line_numbers?
+          @debug |= Debug::WASMLineNumbers
+        end
+      end
+
       @abi = ABI.from(@program.target_machine)
       # LLVM::Context.register(@llvm_context, "main")
       @llvm_mod = configure_module(@llvm_context.new_module("main_module"))
@@ -382,6 +391,7 @@ module Crystal
       if @debug.line_numbers?
         set_current_debug_location Location.new(@program.filename || "(no name)", 1, 1)
       end
+      shadow_stack_push(MAIN_NAME, @node.location)
 
       once_init
       initialize_simple_constants
@@ -397,7 +407,7 @@ module Crystal
       llvm_mod.data_layout = @program.target_machine.data_layout
 
       {% unless LibLLVM::IS_LT_240 %}
-      if @program.codegen_target.wasm?
+        if @program.codegen_target.wasm?
           # enable WASM exception handling (EH)
           llvm_mod.add_flag(:error, "exception-model", "wasm")
 
@@ -584,7 +594,7 @@ module Crystal
 
       @modules.each do |name, info|
         mod = info.mod
-        push_debug_info_metadata(mod) unless @debug.none?
+        push_debug_info_metadata(mod) if @debug.line_numbers? || @debug.variables?
 
         mod.dump if dump_all_llvm || dump_llvm_regex.try &.matches?(name)
 
@@ -776,7 +786,7 @@ module Crystal
               when Path
                 # Make sure the constant is initialized before taking a pointer of it
                 const = node_exp.target_const.not_nil!
-                read_const_pointer(const)
+                read_const_pointer(const, node_exp.location)
               when ReadInstanceVar
                 accept node_exp.obj
                 instance_var_ptr (node_exp.obj.type), node_exp.name, @last
@@ -903,11 +913,11 @@ module Crystal
       if return_phi = context.return_phi
         return_phi.add @last, node_type
       else
-        codegen_return node_type, target_def
+        codegen_return node_type, target_def, node.location
       end
     end
 
-    def codegen_return(return_type : Type?, target_def : Def?)
+    def codegen_return(return_type : Type?, target_def : Def?, location = nil)
       case return_type
       when NoReturnType, Nil
         unreachable
@@ -918,7 +928,7 @@ module Crystal
       # value must be either casted or passed by sret
       if target_def && target_def.c_calling_convention? && target_def.abi_info?
         if return_type.proc?
-          @last = check_proc_is_not_closure(@last, return_type)
+          @last = check_proc_is_not_closure(@last, return_type, location)
         end
 
         abi_info = abi_info(target_def)
@@ -1311,7 +1321,7 @@ module Crystal
       # type we need to check that the value is not a closure and just get
       # the function pointer
       if target.is_a?(InstanceVar) && context.type.extern? && target.type.proc?
-        llvm_value = check_proc_is_not_closure(llvm_value, target.type)
+        llvm_value = check_proc_is_not_closure(llvm_value, target.type, node.location)
       end
 
       assign ptr, target_type, value.type, llvm_value
@@ -1647,8 +1657,10 @@ module Crystal
     end
 
     def codegen_raise_cast_failed(value, type_id, obj_type, to_type, node)
-      location = node.location
-      set_current_debug_location(location) if location && @debug.line_numbers?
+      if location = node.location
+        shadow_stack_location(location)
+        set_current_debug_location(location) if @debug.line_numbers?
+      end
 
       if func = crystal_raise_cast_failed_fun
         call_args = [
@@ -1927,10 +1939,11 @@ module Crystal
       false
     end
 
-    def check_proc_is_not_closure(value, type)
+    def check_proc_is_not_closure(value, type, location = nil)
       check_fun_name = "~check_proc_is_not_closure"
       func = typed_fun?(@main_mod, check_fun_name) || create_check_proc_is_not_closure_fun(check_fun_name)
       func = check_main_fun check_fun_name, func
+      shadow_stack_location(location)
       value = call func, [value] of LLVM::Value
       pointer_cast value, llvm_proc_type(type).pointer
     end
@@ -2043,12 +2056,14 @@ module Crystal
         position_at_end block
         yield func.func
       end
+      @shadow_stack_frames.delete(context.fun)
       func
     end
 
     # used for generated internal functions like `~metaclass` and `~match`
     def set_internal_fun_debug_location(func, name, location = nil)
-      return if @debug.none?
+      return unless @debug.line_numbers? || @debug.variables?
+
       location ||= UNKNOWN_LOCATION
       emit_fun_debug_metadata(func, name, location)
       set_current_debug_location(location) if @debug.line_numbers?
