@@ -66,16 +66,6 @@ describe HTTP::ChunkedContent do
     mem.pos.should eq mem.bytesize
   end
 
-  it "#gets reads multiple chunks with \n" do
-    # The RFC format requires CRLF, but several standard implementations also
-    # accept LF, so we should too.
-    mem = IO::Memory.new("1\nA\n1\nB\n0\n\n")
-    content = HTTP::ChunkedContent.new(mem)
-
-    content.gets.should eq "AB"
-    mem.pos.should eq mem.bytesize
-  end
-
   it "#read reads empty content" do
     mem = IO::Memory.new("0\r\n\r\n")
     content = HTTP::ChunkedContent.new(mem)
@@ -165,11 +155,29 @@ describe HTTP::ChunkedContent do
     end
   end
 
-  it "reads chunk extensions" do
+  it "skips chunk extensions" do
     mem = IO::Memory.new(%(1;progress=50;foo="bar"\r\nA\r\n1;progress=100\r\nB\r\n0\r\n\r\n"))
 
     chunked = HTTP::ChunkedContent.new(mem)
     chunked.gets(2).should eq "AB"
+  end
+
+  it "accepts BWS after chunk-size if chunk-ext" do
+    mem = IO::Memory.new(%(1 ; progress=50\r\nA\r\n1\t\t;progress=100\r\nB\r\n0\r\n\r\n"))
+
+    chunked = HTTP::ChunkedContent.new(mem)
+    chunked.gets(2).should eq "AB"
+  end
+
+  it "rejects lone LF/CR in chunk-line" do
+    [
+      "1\nA\r\n",
+      "3;foo\nbar\r\nbaz\r\n",
+      "3;foo\rbar\r\nbaz\r\n",
+    ].each do |line|
+      chunked = HTTP::ChunkedContent.new(IO::Memory.new(line))
+      expect_raises(IO::Error, "Invalid HTTP chunked content: invalid chunk size") { chunked.gets(1) }
+    end
   end
 
   describe "trailing headers" do
@@ -259,14 +267,14 @@ describe HTTP::ChunkedContent do
     end
   end
 
-  it "fails if invalid chunk size" do
-    mem = IO::Memory.new("G\r\n")
-
-    chunked = HTTP::ChunkedContent.new(mem)
-    expect_raises IO::Error, "Invalid HTTP chunked content: invalid chunk size" do
-      chunked.gets
+  {% for size in ["+6", "-5", "-c", "-1", "+0", "-0", " 6", "6 ", "0x6", "6_0", "", "G", "80000000"] %}
+    it "rejects invalid chunk-size ({{size.id}})" do
+      content = HTTP::ChunkedContent.new(IO::Memory.new("{{size.id}}\r\n..."))
+      expect_raises IO::Error, "Invalid HTTP chunked content: invalid chunk size" do
+        content.gets
+      end
     end
-  end
+  {% end %}
 
   it "#read stops reading after final chunk" do
     mem = IO::Memory.new("0\r\n\r\n1\r\nA\r\n0\r\n\r\n")
