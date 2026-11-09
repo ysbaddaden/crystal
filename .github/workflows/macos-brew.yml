@@ -1,0 +1,31 @@
+name: macOS Homebrew
+
+on: [push, pull_request]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+env:
+  SPEC_SPLIT_DOTS: 160
+  TZ: America/New_York
+
+jobs:
+  test-std:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - run: brew install bdw-gc gmp libffi libxml2 libyaml llvm@22 openssl@3 pcre2
+      - run: echo "$(brew --prefix llvm@22)/bin" >> "$GITHUB_PATH"
+      - run: sudo systemsetup -settimezone "$TZ"
+
+      - uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: 1.22.2
+
+      - run: make std_spec
