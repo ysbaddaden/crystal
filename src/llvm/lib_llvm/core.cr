@@ -212,6 +212,13 @@ lib LibLLVM
 
   fun set_metadata = LLVMSetMetadata(val : ValueRef, kind_id : UInt, node : ValueRef)
   fun get_next_instruction = LLVMGetNextInstruction(inst : ValueRef) : ValueRef
+  fun get_instruction_opcode = LLVMGetInstructionOpcode(inst : ValueRef) : LLVM::Opcode
+  fun get_called_value = LLVMGetCalledValue(inst : ValueRef) : ValueRef
+  fun get_num_successors = LLVMGetNumSuccessors(term : ValueRef) : UInt
+  fun get_successor = LLVMGetSuccessor(term : ValueRef, index : UInt) : BasicBlockRef
+  fun count_incoming = LLVMCountIncoming(phi : ValueRef) : UInt
+  fun get_incoming_block = LLVMGetIncomingBlock(phi : ValueRef, index : UInt) : BasicBlockRef
+  fun get_incoming_value = LLVMGetIncomingValue(phi : ValueRef, index : UInt) : ValueRef
 
   fun get_num_arg_operands = LLVMGetNumArgOperands(instr : ValueRef) : UInt
   fun set_instruction_call_convention = LLVMSetInstructionCallConv(instr : ValueRef, cc : LLVM::CallConvention)
@@ -226,6 +233,7 @@ lib LibLLVM
     fun create_builder_for_module = LLVMCreateBuilderForModule(m : ModuleRef) : BuilderRef
   {% end %}
   fun position_builder_at_end = LLVMPositionBuilderAtEnd(builder : BuilderRef, block : BasicBlockRef)
+  fun position_builder_before = LLVMPositionBuilderBefore(builder : BuilderRef, instruction : ValueRef)
   fun get_insert_block = LLVMGetInsertBlock(builder : BuilderRef) : BasicBlockRef
   fun dispose_builder = LLVMDisposeBuilder(builder : BuilderRef)
 

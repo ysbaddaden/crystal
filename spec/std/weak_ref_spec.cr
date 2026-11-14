@@ -49,6 +49,9 @@ describe WeakRef do
     end
     GC.collect
     FinalizeState.count("strong_foo_ref").should eq 0
+
+    # Keep the strong references live across collection in optimized builds.
+    instances.each { |instance| instance.key.should eq("strong_foo_ref") }
   end
 
   it "Weak referenced object should be released if no other reference" do

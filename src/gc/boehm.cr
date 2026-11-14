@@ -16,7 +16,7 @@ require "crystal/tracing"
 #
 # OTHERS: On other systems, we add the linker annotation here to make sure libpthread is loaded
 # before libgc which looks up symbols from libpthread.
-{% unless flag?(:win32) || flag?(:musl) || flag?(:darwin) || flag?(:android) || (flag?(:interpreted) && flag?(:gnu)) %}
+{% unless flag?(:wasm32) || flag?(:win32) || flag?(:musl) || flag?(:darwin) || flag?(:android) || (flag?(:interpreted) && flag?(:gnu)) %}
   @[Link("pthread")]
 {% end %}
 
@@ -121,7 +121,7 @@ lib LibGC
 
   fun push_all_eager = GC_push_all_eager(bottom : Void*, top : Void*)
 
-  {% if !flag?(:without_mt) || flag?(:win32) || compare_versions(VERSION, "8.2.0") >= 0 %}
+  {% if !flag?(:without_mt) || flag?(:win32) || flag?(:wasm32) || compare_versions(VERSION, "8.2.0") >= 0 %}
     fun get_my_stackbottom = GC_get_my_stackbottom(sb : StackBase*) : ThreadHandle
     fun set_stackbottom = GC_set_stackbottom(th : ThreadHandle, sb : StackBase*)
   {% else %}
@@ -221,7 +221,7 @@ module GC
 
   # :nodoc:
   def self.init : Nil
-    {% unless flag?(:win32) %}
+    {% unless flag?(:win32) || flag?(:wasm32) %}
       LibGC.set_handle_fork(1)
     {% end %}
     LibGC.init
@@ -358,7 +358,7 @@ module GC
 
   private def self.add_finalizer_impl(object : T) forall T
     LibGC.register_finalizer_ignore_self(object.as(Void*),
-      ->(obj, data) { obj.as(T).finalize },
+      ->(obj, data) { obj.as(T).finalize; nil },
       nil, nil, nil)
     nil
   end
@@ -421,7 +421,7 @@ module GC
       raise RuntimeError.from_errno("GC_beginthreadex") if ret.zero?
       LibC::HANDLE.new(ret)
     end
-  {% else %}
+  {% elsif !flag?(:wasm32) %}
     # :nodoc:
     def self.pthread_create(thread : LibC::PthreadT*, attr : LibC::PthreadAttrT*, start : Void* -> Void*, arg : Void*)
       LibGC.pthread_create(thread, attr, start, arg)

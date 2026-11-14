@@ -2,6 +2,7 @@ require "option_parser"
 require "file_utils"
 require "colorize"
 require "crystal/digest/md5"
+require "./wasm_gc"
 {% if flag?(:msvc) %}
   require "./loader"
 {% end %}
@@ -351,6 +352,10 @@ module Crystal
     private def bc_flags_changed?(output_dir)
       bc_flags_changed = true
       current_bc_flags = "#{@codegen_target}|#{@mcpu}|#{@mattr}|#{@link_flags}|#{@mcmodel}"
+      # Root spilling runs after the cached bitcode has been generated.
+      if @codegen_target.wasm? && !@flags.includes?("gc_none")
+        current_bc_flags += "|wasm-gc-roots-v2"
+      end
       bc_flags_filename = "#{output_dir}/bc_flags#{optimization_mode.suffix}"
       if File.file?(bc_flags_filename)
         previous_bc_flags = File.read(bc_flags_filename).strip
@@ -454,6 +459,7 @@ module Crystal
 
       @progress_tracker.stage("Codegen (bc+obj)") do
         optimize llvm_mod, target_machine unless @optimization_mode.o0?
+        prepare_codegen(llvm_mod)
 
         emit_filename = emit_base_filename || output_filename
         unit.emit(@emit_targets | EmitTarget::OBJ, emit_filename, from_cache: false)
@@ -807,6 +813,13 @@ module Crystal
       {% end %}
     end
 
+    protected def prepare_codegen(llvm_mod)
+      if codegen_target.wasm? && !flags.includes?("gc_none")
+        WasmGC.run(llvm_mod)
+        llvm_mod.verify
+      end
+    end
+
     private def run_linker(linker_name, command, args)
       print_command(command, args) if verbose?
 
@@ -969,6 +982,7 @@ module Crystal
         temporary_object_name = self.temporary_object_name
         target_machine = compiler.create_target_machine
         compiler.optimize llvm_mod, target_machine if optimize && !compiler.optimization_mode.o0?
+        compiler.prepare_codegen(llvm_mod) if optimize
         target_machine.emit_obj_to_file llvm_mod, temporary_object_name
         FileUtils.mv(temporary_object_name, file_name)
       end
