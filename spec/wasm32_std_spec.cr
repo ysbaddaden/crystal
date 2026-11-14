@@ -84,6 +84,7 @@ require "./std/enumerable_spec.cr"
 require "./std/env_spec.cr"
 require "./std/errno_spec.cr"
 # require "./std/exception/call_stack_spec.cr" (failed to run)
+require "./std/exception/wasm_shadow_stack_spec.cr"
 require "./std/exception_spec.cr"
 # require "./std/fiber/execution_context/global_queue_spec.cr"
 # require "./std/fiber/execution_context/isolated_spec.cr"
@@ -283,7 +284,7 @@ require "./std/uri/punycode_spec.cr"
 require "./std/uuid/json_spec.cr"
 # require "./std/uuid/yaml_spec.cr" (failed linking)
 require "./std/uuid_spec.cr"
-# require "./std/va_list_spec.cr" (failed codegen)
+# require "./std/va_list_spec.cr" (failed to run)
 # require "./std/wait_group_spec.cr" (failed to run)
 # require "./std/weak_ref_spec.cr" (failed to run)
 require "./std/winerror_spec.cr"
