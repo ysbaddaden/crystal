@@ -1,6 +1,56 @@
 require "../../spec_helper"
 
 describe "Code gen: cast" do
+  {false, true}.each do |value|
+    it "loads a concrete Bool through a nilable cyclic binding (#{value})" do
+      run(<<-CRYSTAL).to_i.should eq(value ? 42 : 0)
+        require "prelude"
+
+        if true
+          x = #{value}
+        end
+
+        begin
+        rescue
+          x = #{value}
+        end
+
+        if x
+          42
+        else
+          0
+        end
+        CRYSTAL
+    end
+  end
+
+  it "loads a concrete proc through a union restriction" do
+    run(<<-CRYSTAL).to_b.should be_true
+      require "prelude"
+
+      def invoke(pr : Proc(Nil) | Proc(String))
+        pr.call
+      end
+
+      invoke(->{ "ok" }) == "ok"
+      CRYSTAL
+  end
+
+  it "loads a concrete integer through a mixed-width range binding" do
+    run(<<-CRYSTAL).to_b.should be_true
+      require "prelude"
+
+      values = [1_i64]
+      result = (0..10_i64).bsearch do |i|
+        values.each do
+          values.bsearch_index { |value| value < i }
+        end
+        true
+      end
+      result == 0
+      CRYSTAL
+  end
+
   it "allows casting object to pointer and back" do
     run(<<-CRYSTAL).to_i.should eq(1)
       class Foo
