@@ -1,6 +1,27 @@
 require "../../spec_helper"
 
 describe "Code gen: if" do
+  {"value.is_a?(Int)", "log << 1; value.is_a?(Int)"}.each do |condition|
+    it "preserves static truthiness through parenthesized expressions (#{condition})" do
+      run(<<-CRYSTAL).to_b.should be_true
+        require "prelude"
+
+        def check(value : String, log)
+          raise "assertion" if !(#{condition})
+          value = [1, value].max
+        end
+
+        log = [] of Int32
+        begin
+          check("42", log)
+          false
+        rescue ex
+          ex.message == "assertion" && log.size == #{condition.starts_with?("log") ? 1 : 0}
+        end
+        CRYSTAL
+    end
+  end
+
   it "codegens if without an else with true" do
     run("a = 1; if true; a = 2; end; a").to_i.should eq(2)
   end
