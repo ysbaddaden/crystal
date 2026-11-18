@@ -311,6 +311,12 @@ class Crystal::CodeGenVisitor
     value
   end
 
+  def downcast_distinct(value, to_type : VirtualType, from_type : NonGenericClassType | GenericClassInstanceType)
+    # A block argument can narrow from its declared type to the yielded type,
+    # while cyclic bindings in its body still retain the declared hierarchy.
+    cast_to value, to_type
+  end
+
   def downcast_distinct(value, to_type : ReferenceUnionType, from_type : VirtualType)
     # This happens if the restriction is a union:
     # we keep each of the union types as the result, we don't fully merge

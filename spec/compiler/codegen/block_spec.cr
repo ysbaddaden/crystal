@@ -1,6 +1,58 @@
 require "../../spec_helper"
 
 describe "Code gen: block" do
+  it "keeps yielded argument types across nested block call lookups" do
+    run(<<-CRYSTAL).to_i.should eq(42)
+      class Resource
+        def self.open(& : Resource ->)
+          yield Resource::File.new
+        end
+
+        def ls(&)
+          yield
+        end
+
+        class File < Resource
+        end
+      end
+
+      Resource.open do |resource|
+        resource.ls do
+          resource.ls { 42 }
+        end
+      end
+      CRYSTAL
+  end
+
+  it "keeps yielded argument types across loops with nested blocks" do
+    run(<<-CRYSTAL).to_i.should eq(42)
+      class Foo
+        def self.foo(& : self -> _)
+          yield Foo.new
+        end
+
+        def value
+          42
+        end
+      end
+
+      class Bar < Foo
+      end
+
+      def it(&)
+        yield
+      end
+
+      Foo.foo do |x|
+        while true
+          x
+          it { }
+          break x.value
+        end
+      end
+      CRYSTAL
+  end
+
   it "generate inline" do
     run(<<-CRYSTAL).to_i.should eq(1)
       def foo
