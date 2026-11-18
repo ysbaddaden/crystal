@@ -1,6 +1,26 @@
 require "../../spec_helper"
 
 describe "Code gen: def" do
+  it "keeps inferred virtual return types in annotated recursive methods" do
+    run(<<-CRYSTAL).to_i.should eq(1)
+      class Base
+        def value
+          1
+        end
+      end
+
+      class Sub < Base
+      end
+
+      def foo(recurse : Bool) : Base
+        foo(false) if recurse
+        Base.new.as(Base)
+      end
+
+      foo(true).value
+      CRYSTAL
+  end
+
   it "codegens empty def" do
     run("def foo; end; foo")
   end

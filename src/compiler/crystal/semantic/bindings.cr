@@ -347,12 +347,20 @@ module Crystal
   end
 
   class Def
+    property recursive_return_type : Type?
+
+    def inferred_type?
+      @type
+    end
+
     def map_type(type)
       # When we have Nil forced as a return type, NoReturn still
       # wins, so we must account for this case.
       # Otherwise we simply keep having the Nil type.
       if freeze_type.try &.nil_type? && !type.no_return?
         freeze_type
+      elsif (recursive_return_type = @recursive_return_type) && !type.no_return? && type.implements?(recursive_return_type)
+        Type.merge!(type, recursive_return_type)
       else
         type
       end

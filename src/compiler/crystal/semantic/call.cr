@@ -403,7 +403,14 @@ class Crystal::Call
       def_instance_key = DefInstanceKey.new(match.def.object_id, lookup_arg_types, block_type, named_args_types)
       typed_def = def_instance_owner.lookup_def_instance def_instance_key if use_cache
 
-      unless typed_def
+      if typed_def
+        # A recursive call can use the annotation before the body is typed.
+        # Keep that result stable when the body's inferred type arrives:
+        # narrowing it can make cyclic variable bindings oscillate.
+        unless typed_def.inferred_type?
+          typed_def.recursive_return_type = typed_def.freeze_type
+        end
+      else
         typed_def, typed_def_args = prepare_typed_def_with_args(match.def, match_owner, lookup_self_type, match.arg_types, block_arg_type, named_args_types)
         def_instance_owner.add_def_instance(def_instance_key, typed_def) if use_cache
 

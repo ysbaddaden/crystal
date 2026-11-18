@@ -73,6 +73,17 @@ describe "Semantic: def" do
     assert_type("def foo; bar; end; def bar; foo; end; foo") { no_return }
   end
 
+  it "checks the body return type after a recursive call uses the declared type" do
+    assert_error <<-CRYSTAL, "must return Int32 but it is returning String"
+      def foo : Int32
+        foo
+        "wrong"
+      end
+
+      foo
+      CRYSTAL
+  end
+
   it "types call with union argument" do
     assert_type("def foo(x); x; end; a = 1 || 1.1; foo(a)") { union_of(int32, float64) }
   end

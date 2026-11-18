@@ -1,6 +1,29 @@
 require "../../spec_helper"
 
 describe "Codegen: while" do
+  {false, true}.each do |conditional|
+    it "codegens recursive tuple assignment in a loop (conditional: #{conditional})" do
+      codegen <<-CRYSTAL
+        class Gen(T)
+        end
+
+        class Sub < Gen(Int32)
+        end
+
+        def f(g : Gen(String)) : {Int32, Gen(String)}
+          while g
+            #{conditional ? "if 1" : ""}
+              _, g = f(g)
+            #{conditional ? "end" : ""}
+          end
+          {0, Gen(String).new}
+        end
+
+        f(Gen(String).new)
+        CRYSTAL
+    end
+  end
+
   it "codegens def with while" do
     run("def foo; while false; 1; end; end; foo")
   end
