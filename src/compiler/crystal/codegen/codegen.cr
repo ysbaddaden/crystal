@@ -1484,7 +1484,13 @@ module Crystal
 
         # Special variables always have an extra pointer
         already_loaded = (node.special_var? ? false : var.already_loaded)
-        @last = downcast var.pointer, node.type, var.type, already_loaded, extern: false
+        if node.type.is_a?(UnionType) && var.type != node.type && var.type.implements?(node.type)
+          # Cyclic bindings can retain a broader read type after storage narrows.
+          value = already_loaded ? var.pointer : to_lhs(var.pointer, var.type)
+          @last = upcast(value, node.type, var.type)
+        else
+          @last = downcast var.pointer, node.type, var.type, already_loaded, extern: false
+        end
       elsif node.name == "self"
         if node.type.metaclass?
           @last = type_id(node.type)
