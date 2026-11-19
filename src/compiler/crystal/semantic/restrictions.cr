@@ -885,7 +885,14 @@ module Crystal
       types = other.types.compact_map do |ident|
         restrict(ident, context).as(Type?)
       end
-      types.size > 0 ? program.type_merge_union_of(types) : nil
+      merge_restrictions(types)
+    end
+
+    # Keep an unchanged match instead of merging it with optional coercions,
+    # such as discarding a Proc's return value through Proc(Nil).
+    private def merge_restrictions(types)
+      return self if types.any?(&.same?(self))
+      program.type_merge_union_of(types)
     end
 
     def restrict(other : Path, context)
@@ -960,7 +967,7 @@ module Crystal
           end
         end
 
-        return types.size > 0 ? program.type_merge_union_of(types) : nil
+        return merge_restrictions(types)
       end
 
       parents.try &.each do |parent|

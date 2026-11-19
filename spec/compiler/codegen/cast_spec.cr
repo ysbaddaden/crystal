@@ -2,7 +2,7 @@ require "../../spec_helper"
 
 describe "Code gen: cast" do
   {false, true}.each do |value|
-    it "loads a concrete Bool through a nilable cyclic binding (#{value})" do
+    it "preserves Bool values across nilable rescue bindings (#{value})" do
       run(<<-CRYSTAL).to_i.should eq(value ? 42 : 0)
         require "prelude"
 
@@ -24,7 +24,24 @@ describe "Code gen: cast" do
     end
   end
 
-  it "loads a concrete proc through a union restriction" do
+  it "initializes a conditionally assigned Bool to nil across rescue (#15760)" do
+    run(<<-CRYSTAL).to_b.should be_true
+      require "prelude"
+
+      if false
+        x = true
+      end
+
+      begin
+      rescue
+        x = true
+      end
+
+      x.nil?
+      CRYSTAL
+  end
+
+  it "keeps a concrete proc through a union restriction" do
     run(<<-CRYSTAL).to_b.should be_true
       require "prelude"
 

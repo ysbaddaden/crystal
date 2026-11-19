@@ -524,12 +524,6 @@ class Crystal::CodeGenVisitor
   end
 
   def downcast_distinct(value, to_type : Type, from_type : Type)
-    # Cyclic bindings can retain a union after the variable's storage narrows
-    # to one of its members. Such reads need to construct the union value.
-    if to_type.is_a?(UnionType) && from_type.implements?(to_type)
-      return upcast(value, to_type, from_type)
-    end
-
     raise "BUG: trying to downcast #{to_type} (#{to_type.class}) <- #{from_type} (#{from_type.class})"
   end
 
