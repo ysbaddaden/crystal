@@ -1384,7 +1384,7 @@ describe "Code gen: macro" do
 
   it "can use macro inside array literal" do
     run(<<-CRYSTAL).to_i.should eq(42)
-      require "prelude"
+      require "array_single_entry"
 
       macro foo
         42
@@ -1397,7 +1397,7 @@ describe "Code gen: macro" do
 
   it "can use macro inside hash literal" do
     run(<<-CRYSTAL).to_i.should eq(42)
-      require "prelude"
+      require "hash_single_entry"
 
       macro foo
         42
@@ -1905,8 +1905,16 @@ describe "Code gen: macro" do
   end
 
   it "expands macro with op assign inside assign (#5568)" do
-    run(<<-CRYSTAL).to_string.chomp.should eq("2")
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "hash_single_entry"
+
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      fun __crystal_raise_overflow : NoReturn
+        LibC.abort
+      end
 
       macro expand
         {{ yield }}
@@ -1918,7 +1926,7 @@ describe "Code gen: macro" do
 
       expand do
         x = foo[:foo] += 1
-        puts x
+        LibC.exit(x)
       end
       CRYSTAL
   end

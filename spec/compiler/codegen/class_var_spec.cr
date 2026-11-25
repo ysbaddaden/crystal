@@ -505,16 +505,10 @@ describe "Codegen: class var" do
 
   it "doesn't crash with pointerof from another module" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "single_threaded_once"
+
       lib LibC
         fun exit(status : Int32) : NoReturn
-      end
-
-      # Single-threaded once initialization for the class variable.
-      fun __crystal_once(flag : Bool*, initializer : Void*)
-        return if flag.value
-        callback = {initializer, Pointer(Void).new(0)}
-        pointerof(callback).as(Proc(Nil)*).value.call
-        flag.value = true
       end
 
       class Foo

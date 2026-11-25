@@ -256,11 +256,11 @@ describe "Code gen: array literal spec" do
   end
 
   it "assignment in array literal works" do
-    run("require \"prelude\"; [a = 1]; a").to_i.should eq(1)
+    run(%(require "array_single_entry"; [a = 1]; a)).to_i.should eq(1)
   end
 
   it "assignment in array-like literal works" do
-    run("require \"prelude\"; Array(Int32){a = 1}; a").to_i.should eq(1)
+    run(%(require "array_single_entry"; Array(Int32){a = 1}; a)).to_i.should eq(1)
   end
 end
 

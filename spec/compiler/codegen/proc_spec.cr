@@ -767,8 +767,13 @@ describe "Code gen: proc" do
   end
 
   it "uses alias of proc with virtual type (#1347)" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "hash_single_entry"
+      require "single_threaded_once"
+
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
 
       class Class1
         def foo
@@ -811,7 +816,7 @@ describe "Code gen: proc" do
 
       Foo.call
 
-      Global.x
+      LibC.exit(Global.x)
       CRYSTAL
   end
 
