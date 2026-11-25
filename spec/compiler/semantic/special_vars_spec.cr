@@ -17,7 +17,12 @@ describe "Semantic: special vars" do
 
     it "types #{name} when not defined as no return" do
       assert_type(<<-CRYSTAL) { no_return }
-        require "prelude"
+        struct Nil
+          def not_nil! : NoReturn
+            x = uninitialized NoReturn
+            x
+          end
+        end
 
         #{name}
         CRYSTAL

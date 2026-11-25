@@ -320,9 +320,11 @@ describe "Semantic: NoReturn" do
 
   it "types as NoReturn if typeof(exp)'s exp is NoReturn" do
     assert_type(<<-CRYSTAL) { no_return.metaclass }
-      require "prelude"
+      lib LibC
+        fun exit : NoReturn
+      end
 
-      typeof(raise("").foo)
+      typeof(LibC.exit.foo)
       CRYSTAL
   end
 
