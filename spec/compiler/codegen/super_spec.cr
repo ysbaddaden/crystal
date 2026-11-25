@@ -359,9 +359,15 @@ describe "Codegen: super" do
   end
 
   it "calls super in metaclass (#1522)" do
-    # We include the prelude so this is codegened for real, because that's where the issue lies
-    run(<<-CRYSTAL).to_i.should eq(5)
-      require "prelude"
+    # The regression was a duplicate symbol across linked modules.
+    link_and_run(<<-CRYSTAL, prelude: "empty").status.exit_code.should eq(5)
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      fun __crystal_raise_overflow : NoReturn
+        LibC.exit(99)
+      end
 
       class Global
         @@x = 0
@@ -388,7 +394,7 @@ describe "Codegen: super" do
       end
 
       Base.foo
-      One.foo
+      LibC.exit(One.foo)
       CRYSTAL
   end
 
