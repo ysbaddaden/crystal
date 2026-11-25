@@ -473,7 +473,7 @@ describe "Semantic: tuples" do
 
   it "accepts tuple covariance in array" do
     assert_type(<<-CRYSTAL) { tuple_of [types["Foo"].virtual_type!, types["Foo"].virtual_type!] }
-      require "prelude"
+      require "array_access"
 
       class Foo
       end

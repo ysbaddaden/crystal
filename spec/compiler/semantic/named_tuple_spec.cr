@@ -265,7 +265,7 @@ describe "Semantic: named tuples" do
 
   it "accepts named tuple covariance in array" do
     assert_type(<<-CRYSTAL) { named_tuple_of({"x": types["Foo"].virtual_type!, "y": types["Foo"].virtual_type!}) }
-      require "prelude"
+      require "array_access"
 
       class Foo
       end

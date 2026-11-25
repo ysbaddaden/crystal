@@ -1,4 +1,5 @@
 require "./array_literal"
+require "./array_access"
 
 # Supports tuple splats in array literals during semantic analysis.
 struct Tuple
@@ -21,10 +22,6 @@ module Enumerable(T)
 end
 
 class Array(T)
-  def <<(element : T) : self
-    self
-  end
-
   def concat(source) : self
     source.each { |element| self << element }
     self
