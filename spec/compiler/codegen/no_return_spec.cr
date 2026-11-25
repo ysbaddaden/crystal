@@ -11,8 +11,6 @@ describe "Code gen: no return" do
 
   it "codegens if with no return and variable used afterwards" do
     codegen(<<-CRYSTAL)
-      require "prelude"
-
       lib LibC
         fun exit2 : NoReturn
       end
@@ -24,7 +22,7 @@ describe "Code gen: no return" do
 
   it "codegen types exception handler as NoReturn if ensure is NoReturn" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "unreachable_unwind"
 
       lib LibC
         fun foo : NoReturn

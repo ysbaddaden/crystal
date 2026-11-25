@@ -165,7 +165,8 @@ describe "Codegen: class var" do
 
   it "initializes class var with array literal" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
+      require "literal_array_storage"
+      require "single_threaded_once"
 
       class Foo
         @@var = [1, 2, 4]

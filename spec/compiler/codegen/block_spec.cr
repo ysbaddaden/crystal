@@ -933,7 +933,8 @@ describe "Code gen: block" do
 
   it "codegens dispatch with block and break (2)" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
+      require "literal_array_storage"
+      require "checked_overflow"
 
       a = [1, 2, 3] || [1.5]
       n = 0

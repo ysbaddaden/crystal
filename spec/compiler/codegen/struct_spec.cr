@@ -632,8 +632,8 @@ describe "Code gen: struct" do
   end
 
   it "can call new on abstract struct with single child (#7309)" do
-    codegen(<<-CRYSTAL, inject_primitives: false)
-      require "prelude"
+    codegen(<<-CRYSTAL)
+      require "cleanup_raise"
 
       abstract struct Foo
         @x = 1

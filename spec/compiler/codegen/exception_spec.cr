@@ -27,7 +27,8 @@ describe "Code gen: exception" do
 
   it "codegens exception handler with return" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "unreachable_unwind"
+      require "checked_overflow"
 
       def foo
         begin

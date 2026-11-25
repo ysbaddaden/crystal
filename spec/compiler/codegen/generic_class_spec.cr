@@ -256,8 +256,18 @@ describe "Code gen: generic class type" do
   end
 
   it "uses big integer as generic type argument (#2353)" do
-    run(<<-CRYSTAL).to_u64.should eq(2374623294237463578)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      require "checked_overflow"
+
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      struct Int64
+        def - : Int64
+          0_i64 - self
+        end
+      end
 
       MIN_RANGE = -2374623294237463578
       MAX_RANGE = -MIN_RANGE
@@ -268,7 +278,7 @@ describe "Code gen: generic class type" do
         end
       end
 
-      Hello(MAX_RANGE).t
+      LibC.exit(Hello(MAX_RANGE).t == 2374623294237463578 ? 0 : 1)
       CRYSTAL
   end
 
@@ -451,7 +461,7 @@ describe "Code gen: generic class type" do
 
   it "doesn't crash on generic type restriction with no subtypes (#7583)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "cleanup_raise"
 
       class Foo
       end

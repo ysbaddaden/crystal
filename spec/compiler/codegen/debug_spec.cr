@@ -222,7 +222,7 @@ describe "Code gen: debug" do
 
   it "emits global debug info once for constants read before assignment" do
     mod = codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "prelude"
+      require "single_threaded_once"
 
       struct Bar
         def initialize(@x : Int32)
@@ -274,7 +274,7 @@ describe "Code gen: debug" do
 
   it "stores and restores debug location after jumping to main (#6920)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "prelude"
+      require "single_threaded_once"
 
       Module.method
 
@@ -325,7 +325,7 @@ describe "Code gen: debug" do
 
   it "doesn't fail on constant read calls (#11416)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "prelude"
+      require "single_threaded_once"
 
       class Foo
         def foo
@@ -343,8 +343,10 @@ describe "Code gen: debug" do
   end
 
   it "doesn't fail on splat expansions inside array-like literals" do
-    run(<<-CRYSTAL, debug: Crystal::Debug::All).to_i.should eq(123)
-      require "prelude"
+    link_and_run(<<-CRYSTAL, debug: Crystal::Debug::All).status.exit_code.should eq(123)
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
 
       class Foo
         def each
@@ -368,7 +370,7 @@ describe "Code gen: debug" do
 
       x = Foo.new
       y = Bar{*x}
-      y.bar
+      LibC.exit(y.bar)
       CRYSTAL
   end
 

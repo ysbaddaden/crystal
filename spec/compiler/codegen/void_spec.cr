@@ -14,7 +14,8 @@ describe "Code gen: void" do
 
   it "codegens void assignment in case" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "int32_case_equality"
+      require "cleanup_raise"
 
       fun foo : Void
       end
@@ -36,7 +37,8 @@ describe "Code gen: void" do
 
   it "codegens void assignment in case with local variable" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "int32_case_equality"
+      require "cleanup_raise"
 
       fun foo : Void
       end

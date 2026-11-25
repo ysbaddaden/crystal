@@ -130,7 +130,19 @@ describe "Code gen: module" do
 
   it "codegens pointer of module with block" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "cleanup_raise"
+
+      class Object
+        def not_nil!
+          self
+        end
+      end
+
+      struct Nil
+        def not_nil!
+          raise "unexpected nil"
+        end
+      end
 
       module Moo
       end

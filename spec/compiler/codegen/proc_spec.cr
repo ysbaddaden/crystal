@@ -568,7 +568,8 @@ describe "Code gen: proc" do
 
   it "codegens proc that accepts array of type" do
     run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+      require "proc_closure"
+      require "literal_array_storage"
 
       class Foo
         def foo
@@ -965,14 +966,18 @@ describe "Code gen: proc" do
   end
 
   it "calls function pointer" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "cleanup_raise"
+
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
 
       fun foo(f : Int32 -> Int32) : Int32
         f.call(1)
       end
 
-      foo(->(x : Int32) { x &+ 1 })
+      LibC.exit(foo(->(x : Int32) { x &+ 1 }))
       CRYSTAL
   end
 

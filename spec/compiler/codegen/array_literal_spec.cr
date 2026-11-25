@@ -252,7 +252,17 @@ describe "Code gen: array literal spec" do
   end
 
   it "creates typed array" do
-    run("require \"prelude\"; typeof([1, 2] of Int8)").to_string.should eq("Array(Int8)")
+    run(<<-CRYSTAL).to_string.should eq("Array(Int8)")
+      require "array_literal"
+
+      class Class
+        def name : String
+          {{ @type.name.stringify }}
+        end
+      end
+
+      typeof([1, 2] of Int8).name
+      CRYSTAL
   end
 
   it "assignment in array literal works" do

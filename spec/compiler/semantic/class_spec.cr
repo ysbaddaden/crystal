@@ -1230,8 +1230,9 @@ describe "Semantic: class" do
   end
 
   it "doesn't try to instantiate abstract generic struct when iterating subtypes (#9621)" do
-    assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
+      require "literal_array_storage"
+      require "cleanup_raise"
 
       abstract struct Base; end
       struct A < Base; end

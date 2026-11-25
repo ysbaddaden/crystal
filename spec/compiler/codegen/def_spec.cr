@@ -152,7 +152,7 @@ describe "Code gen: def" do
 
   it "codegens and doesn't break if obj is int and there's a mutation" do
     run(<<-CRYSTAL)
-      require "prelude"
+      require "array_single_entry"
 
       struct Int
         def baz(x)

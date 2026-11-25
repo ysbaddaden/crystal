@@ -369,10 +369,13 @@ describe "Block inference" do
   end
 
   it "checks block type with virtual type" do
-    assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
+      require "array_map"
 
       class Foo
+        def to_s
+          "foo"
+        end
       end
 
       class Bar < Foo

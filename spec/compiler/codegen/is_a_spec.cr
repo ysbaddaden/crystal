@@ -157,7 +157,15 @@ describe "Codegen: is_a?" do
 
   it "evaluates method on filtered union type 3" do
     run(<<-CRYSTAL).to_i.should eq(5)
-      require "prelude"
+      require "array_single_entry"
+      require "checked_overflow"
+      module Enumerable(T)
+      end
+
+      class Array(T)
+        include Enumerable(T)
+      end
+
       a = 1
       a = [1.1]
       a = [5]
@@ -912,7 +920,7 @@ describe "Codegen: is_a?" do
 
   it "does is_a? for generic type against generic class instance type (#12304)" do
     run(<<-CRYSTAL).to_b.should be_true
-      require "prelude"
+      require "cast_failure"
 
       class A
       end
