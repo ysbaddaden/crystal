@@ -708,7 +708,7 @@ describe "Code gen: proc" do
 
   it "codegens proc to implicit self in constant (#647)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "single_threaded_once"
 
       module Foo
         def self.blah

@@ -1068,8 +1068,10 @@ describe "Semantic: def overload" do
   end
 
   it "matches generic class instance type with another one" do
-    assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
+      require "array_literal"
+      require "array_access"
+
       class Foo
       end
 

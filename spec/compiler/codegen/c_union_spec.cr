@@ -70,7 +70,7 @@ describe "Code gen: c union" do
 
   it "builds union setter with fun type" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "cleanup_raise"
 
       lib LibC
         union Foo

@@ -4,7 +4,7 @@ class Array(T)
     new(size)
   end
 
-  def initialize(@size : Int32)
+  def initialize(@size : Int32 = 0)
   end
 
   def size

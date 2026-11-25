@@ -388,8 +388,8 @@ describe "Block inference" do
   end
 
   it "maps block of union types to union types" do
-    assert_type(<<-CRYSTAL) { array_of(union_of(types["Foo1"].virtual_type, types["Foo2"].virtual_type)) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { array_of(union_of(types["Foo1"].virtual_type, types["Foo2"].virtual_type)) }
+      require "array_map"
 
       class Foo1
       end

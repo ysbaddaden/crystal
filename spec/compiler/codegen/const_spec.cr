@@ -172,7 +172,7 @@ describe "Codegen: const" do
 
   it "allows implicit self in constant, called from another class (bug)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "single_threaded_once"
 
       module Foo
         def self.foo
@@ -194,7 +194,8 @@ describe "Codegen: const" do
 
   it "codegens two consts with same variable name" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
+      require "checked_overflow"
+      require "single_threaded_once"
 
       CONST1 = begin
             a = 1

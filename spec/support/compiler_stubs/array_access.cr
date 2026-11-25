@@ -4,6 +4,10 @@ class Array(T)
     self
   end
 
+  def push(value : T) : self
+    self << value
+  end
+
   def [](index : Int) : T
     element = uninitialized T
     element

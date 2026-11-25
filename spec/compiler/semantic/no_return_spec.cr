@@ -6,7 +6,7 @@ describe "Semantic: NoReturn" do
   end
 
   it "types raise as NoReturn" do
-    assert_type("require \"prelude\"; raise \"foo\"") { no_return }
+    assert_type("require \"cleanup_raise\"; raise \"foo\"") { no_return }
   end
 
   it "types union of NoReturn and something else" do

@@ -320,7 +320,7 @@ describe "Code gen: block" do
 
   it "call block from dispatch and use local vars" do
     run(<<-CRYSTAL).to_i.should eq(4)
-      require "prelude"
+      require "checked_overflow"
 
       def bar(y)
         yield y
@@ -361,7 +361,9 @@ describe "Code gen: block" do
 
   it "break block with yielder inside while" do
     run(<<-CRYSTAL).to_i.should eq(6)
-      require "prelude"
+      require "checked_overflow"
+      require "int_times"
+
       a = 0
       10.times do
         a += 1
@@ -435,9 +437,16 @@ describe "Code gen: block" do
   end
 
   it "break from block with value" do
-    run(<<-CRYSTAL).to_i.should eq(20)
-      require "prelude"
-      10.times { break 20 }
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(20)
+      require "primitives"
+      require "int_times"
+
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      result = 10.times { break 20 }
+      LibC.exit(result || 0)
       CRYSTAL
   end
 

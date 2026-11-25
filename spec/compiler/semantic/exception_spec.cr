@@ -221,7 +221,10 @@ describe "Semantic: exception" do
 
   it "types var as nilable inside ensure (1)" do
     result = assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+      require "semantic_exception"
+
+      def p(value)
+      end
 
       n = nil
       begin
@@ -240,7 +243,10 @@ describe "Semantic: exception" do
 
   it "types var as nilable inside ensure (2)" do
     result = assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+      require "semantic_exception"
+
+      def p(value)
+      end
 
       begin
         raise "hey"
@@ -393,7 +399,7 @@ describe "Semantic: exception" do
 
   it "shadows local variable (1)" do
     assert_type(<<-CRYSTAL) { union_of(int32, types["Exception"].virtual_type) }
-      require "prelude"
+      require "semantic_exception"
 
       a = 1
       begin
@@ -407,7 +413,7 @@ describe "Semantic: exception" do
 
   it "remains nilable after rescue" do
     assert_type(<<-CRYSTAL) { nilable types["Exception"].virtual_type }
-      require "prelude"
+      require "semantic_exception"
 
       begin
         raise "OH NO"
@@ -420,8 +426,6 @@ describe "Semantic: exception" do
 
   it "doesn't consider vars as nilable inside else (#610)" do
     assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
-
       x = 1
       begin
         a = 1

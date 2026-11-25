@@ -632,7 +632,7 @@ describe "Code gen: closure" do
 
   it "doesn't form a closure if invoking class method" do
     run(<<-CRYSTAL).to_b.should be_false
-      require "prelude"
+      require "proc_closure"
 
       class Foo
         def self.foo
@@ -649,7 +649,7 @@ describe "Code gen: closure" do
 
   it "doesn't form a closure if invoking class method with self" do
     run(<<-CRYSTAL).to_b.should be_false
-      require "prelude"
+      require "proc_closure"
 
       class Foo
         def self.foo

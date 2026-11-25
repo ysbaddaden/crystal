@@ -1838,7 +1838,7 @@ describe "Code gen: macro" do
 
   it "gets default value of instance variable of generic type" do
     run(<<-CRYSTAL).to_i.should eq(10)
-      require "prelude"
+      require "cleanup_raise"
 
       struct Int32
         def self.foo
