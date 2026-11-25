@@ -1,5 +1,15 @@
 require "../../spec_helper"
 
+private OVERFLOW_HOOK = <<-CRYSTAL
+  lib LibC
+    fun abort : NoReturn
+  end
+
+  fun __crystal_raise_overflow : NoReturn
+    LibC.abort
+  end
+  CRYSTAL
+
 describe "Code gen: primitives" do
   it "codegens bool" do
     run("true").to_b.should be_true
@@ -59,7 +69,7 @@ describe "Code gen: primitives" do
     # generation of the compiler
 
     it "codegens 1 + 2" do
-      run(%(require "prelude"; 1 + 2)).to_i.should eq(3)
+      run("#{OVERFLOW_HOOK}\n1 + 2").to_i.should eq(3)
     end
 
     it "codegens 1 &+ 2" do
@@ -67,7 +77,7 @@ describe "Code gen: primitives" do
     end
 
     it "codegens 1 - 2" do
-      run(%(require "prelude"; 1 - 2)).to_i.should eq(-1)
+      run("#{OVERFLOW_HOOK}\n1 - 2").to_i.should eq(-1)
     end
 
     it "codegens 1 &- 2" do
@@ -75,7 +85,7 @@ describe "Code gen: primitives" do
     end
 
     it "codegens 2 * 3" do
-      run(%(require "prelude"; 2 * 3)).to_i.should eq(6)
+      run("#{OVERFLOW_HOOK}\n2 * 3").to_i.should eq(6)
     end
 
     it "codegens 2 &* 3" do
@@ -103,7 +113,7 @@ describe "Code gen: primitives" do
     end
 
     it "codegens 1.to_i16" do
-      run(%(require "prelude"; 1.to_i16)).to_i.should eq(1)
+      run("#{OVERFLOW_HOOK}\n1.to_i16").to_i.should eq(1)
     end
 
     it "codegens 1.to_f!" do
