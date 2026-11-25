@@ -1,5 +1,27 @@
 require "../../spec_helper"
 
+private ABSTRACT_ARRAY_EACH = <<-CRYSTAL
+  lib LibC
+    fun exit(status : Int32) : NoReturn
+  end
+
+  def raise(message : String) : NoReturn
+    LibC.exit(1)
+  end
+
+  class Array(T)
+    @has_elements = false
+
+    def each
+      # Type-check the block while preserving the empty array's path past the call.
+      if @has_elements
+        element = uninitialized T
+        yield element
+      end
+    end
+  end
+  CRYSTAL
+
 describe "Semantic: class" do
   it "types Const#allocate" do
     assert_type("class Foo; end; Foo.allocate") { types["Foo"].as(NonGenericClassType) }
@@ -874,7 +896,7 @@ describe "Semantic: class" do
 
   it "can invoke method on abstract type without subclasses nor instances" do
     assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+      #{ABSTRACT_ARRAY_EACH}
 
       abstract class Foo
       end
@@ -887,7 +909,7 @@ describe "Semantic: class" do
 
   it "can invoke method on abstract generic type without subclasses nor instances" do
     assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+      #{ABSTRACT_ARRAY_EACH}
 
       abstract class Foo(T)
       end
@@ -900,7 +922,7 @@ describe "Semantic: class" do
 
   it "can invoke method on abstract generic type with subclasses but no instances" do
     assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+      #{ABSTRACT_ARRAY_EACH}
 
       abstract class Foo(T)
       end
