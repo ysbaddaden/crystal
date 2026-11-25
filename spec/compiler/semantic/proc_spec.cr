@@ -652,8 +652,8 @@ describe "Semantic: proc" do
   end
 
   it "doesn't let passing an non-covariant generic argument" do
-    assert_error <<-CRYSTAL, "no overload matches"
-      require "prelude"
+    assert_error <<-CRYSTAL, "no overload matches", inject_primitives: true
+      require "array_literal"
 
       class Foo
       end

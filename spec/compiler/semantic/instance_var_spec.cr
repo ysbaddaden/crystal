@@ -632,8 +632,8 @@ describe "Semantic: instance var" do
   end
 
   it "infers type from array literal from its literals" do
-    assert_type(<<-CRYSTAL) { array_of union_of(int32, char) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { array_of union_of(int32, char) }
+      require "array_literal"
 
       class Foo
         def initialize
@@ -2717,8 +2717,8 @@ describe "Semantic: instance var" do
   end
 
   it "infers type from array literal with literals in generic type" do
-    assert_type(<<-CRYSTAL) { array_of(int32) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { array_of(int32) }
+      require "array_literal"
 
       class Foo(T)
         def initialize

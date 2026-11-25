@@ -748,8 +748,9 @@ describe "Semantic: def overload" do
   end
 
   it "matches types with free variables" do
-    assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
+      require "array_literal"
+
       def foo(x : Array(T), y : T) forall T
         1
       end
@@ -784,8 +785,9 @@ describe "Semantic: def overload" do
   end
 
   it "prefers more specific overload than one with free variables" do
-    assert_type(<<-CRYSTAL) { float64 }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { float64 }
+      require "array_literal"
+
       def foo(x : Array(T), y : T)
         1
       end

@@ -2,6 +2,14 @@
 
 Crystal::Config.path = "#{__DIR__}/../src"
 
+# Compiler specs may depend on features that only the corelib provides, but
+# requiring the prelude brings an ever evolving with much more features than
+# necessary (slow and reproducibility issues).
+#
+# Instead, we have small, stable, focused, stubs or fixtures that can be
+# independently required across different spec suites and examples.
+COMPILER_SPEC_STUBS_PATH = "#{__DIR__}/support/compiler_stubs"
+
 require "spec"
 
 require "compiler/requires"
@@ -260,6 +268,7 @@ end
 
 private def new_program(flags = nil)
   program = Program.new
+  program.crystal_path.entries << COMPILER_SPEC_STUBS_PATH
   program.color = false
   if flags
     program.user_flags.concat(flags)
@@ -313,8 +322,16 @@ class Crystal::SpecRunOutput
   end
 end
 
+private class SpecCompiler < Compiler
+  private def new_program(sources)
+    program = super
+    program.crystal_path.entries << COMPILER_SPEC_STUBS_PATH
+    program
+  end
+end
+
 def create_spec_compiler
-  compiler = Compiler.new
+  compiler = SpecCompiler.new
   if (n_threads = spec_compiler_threads)
     compiler.n_threads = n_threads
   end

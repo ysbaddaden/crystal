@@ -1,36 +1,12 @@
 require "../../spec_helper"
 
-private ARRAY_LITERAL_STUBS = <<-CRYSTAL
-  class Array(T)
-    def self.unsafe_build(size : Int32)
-      new(size)
-    end
-
-    def initialize(@size : Int32)
-    end
-
-    def size
-      @size
-    end
-
-    def to_unsafe
-      Pointer(T).new(0)
-    end
-  end
-
-  struct Pointer(T)
-    def []=(index : Int32, value : T)
-    end
-  end
-  CRYSTAL
-
 describe "Semantic: array" do
   it "types array literal of int" do
-    assert_type("#{ARRAY_LITERAL_STUBS}\n[1, 2, 3]", inject_primitives: true) { array_of(int32) }
+    assert_type(%(require "array_literal"; [1, 2, 3]), inject_primitives: true) { array_of(int32) }
   end
 
   it "types array literal of union" do
-    assert_type("#{ARRAY_LITERAL_STUBS}\n[1, 2.5]", inject_primitives: true) { array_of(union_of int32, float64) }
+    assert_type(%(require "array_literal"; [1, 2.5]), inject_primitives: true) { array_of(union_of int32, float64) }
   end
 
   it "types empty typed array literal of int32" do
@@ -38,15 +14,15 @@ describe "Semantic: array" do
   end
 
   it "types non-empty typed array literal of int" do
-    assert_type("#{ARRAY_LITERAL_STUBS}\n[1, 2, 3] of Int32", inject_primitives: true) { array_of(int32) }
+    assert_type(%(require "array_literal"; [1, 2, 3] of Int32), inject_primitives: true) { array_of(int32) }
   end
 
   it "types non-empty typed array literal of int" do
-    assert_type("#{ARRAY_LITERAL_STUBS}\n[1, 2, 3] of Int8", inject_primitives: true) { array_of(int8) }
+    assert_type(%(require "array_literal"; [1, 2, 3] of Int8), inject_primitives: true) { array_of(int8) }
   end
 
   it "types array literal size correctly" do
-    assert_type("#{ARRAY_LITERAL_STUBS}\n[1].size", inject_primitives: true) { int32 }
+    assert_type(%(require "array_literal"; [1].size), inject_primitives: true) { int32 }
   end
 
   it "assignment in array literal works (#3195)" do
