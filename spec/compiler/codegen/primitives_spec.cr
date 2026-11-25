@@ -25,22 +25,27 @@ describe "Code gen: primitives" do
   end
 
   it "codegens int128" do
-    # LLVM's JIT doesn't seem to support 128
-    # bit integers well regarding GenericValue
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    # Keep 128-bit operations on the linked path because of LLVM GenericValue limitations.
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      #{OVERFLOW_HOOK}
 
-      1_i128.to_i
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      LibC.exit(1_i128.to_i == 1 ? 0 : 1)
       CRYSTAL
   end
 
   it "codegens uint128" do
-    # LLVM's JIT doesn't seem to support 128
-    # bit integers well regarding GenericValue
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      #{OVERFLOW_HOOK}
 
-      1_u128.to_i
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      LibC.exit(1_u128.to_i == 1 ? 0 : 1)
       CRYSTAL
   end
 

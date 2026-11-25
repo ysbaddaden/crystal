@@ -1602,11 +1602,34 @@ describe "Code gen: block" do
   end
 
   it "codegens proc forwarding from an unused yielded block value (#17125)" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
 
-      private record Foo,
-        proc : String ->
+      # Keep Array#each's typed yield while leaving the array empty at runtime.
+      class Array(T)
+        def initialize
+          @size = 0
+        end
+
+        def each
+          i = 0
+          while i < @size
+            yield Pointer(T).new(0).value
+            i &+= 1
+          end
+        end
+      end
+
+      private struct Foo
+        def initialize(@proc : String ->)
+        end
+
+        def proc
+          @proc
+        end
+      end
 
       def bar(&proc : String ->)
         baz(&proc)
@@ -1619,7 +1642,7 @@ describe "Code gen: block" do
         bar(&foo.proc)
       end
 
-      1
+      LibC.exit(1)
       CRYSTAL
   end
 
