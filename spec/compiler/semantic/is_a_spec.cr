@@ -229,7 +229,7 @@ describe "Semantic: is_a?" do
 
   it "doesn't fail on untyped is_a (#10317)" do
     assert_no_errors(<<-CRYSTAL)
-      require "prelude"
+      require "cleanup_raise"
 
       def foo(&block)
       end

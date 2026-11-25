@@ -1008,8 +1008,8 @@ describe "Semantic: def overload" do
   end
 
   it "matches on partial union" do
-    assert_type(<<-CRYSTAL) { union_of(int32, char) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { union_of(int32, char) }
+      require "numeric_abs"
 
       def foo(x : Int32 | Float64)
         x.abs

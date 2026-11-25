@@ -740,7 +740,7 @@ describe "Code gen: closure" do
 
   it "allows passing an external function along" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "cleanup_raise"
 
 
       lib LibA

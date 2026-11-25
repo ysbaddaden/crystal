@@ -39,7 +39,7 @@ describe "Code gen: tuple" do
 
   it "codegens tuple [0..0]" do
     run(<<-CRYSTAL).to_b.should be_true
-      #{range_new}
+      require "range_literal"
 
       val = {1, true}[0..0]
       val.is_a?(Tuple(Int32)) && val[0] == 1
@@ -48,7 +48,7 @@ describe "Code gen: tuple" do
 
   it "codegens tuple [0..1]" do
     run(<<-CRYSTAL).to_b.should be_true
-      #{range_new}
+      require "range_literal"
 
       val = {1, true}[0..1]
       val.is_a?(Tuple(Int32, Bool)) && val[0] == 1 && val[1] == true
@@ -57,7 +57,7 @@ describe "Code gen: tuple" do
 
   it "codegens tuple [0..2]" do
     run(<<-CRYSTAL).to_b.should be_true
-      #{range_new}
+      require "range_literal"
 
       val = {1, true}[0..2]
       val.is_a?(Tuple(Int32, Bool)) && val[0] == 1&& val[1] == true
@@ -66,7 +66,7 @@ describe "Code gen: tuple" do
 
   it "codegens tuple [1..1]" do
     run(<<-CRYSTAL).to_b.should be_true
-      #{range_new}
+      require "range_literal"
 
       val = {1, true}[1..1]
       val.is_a?(Tuple(Bool)) && val[0] == true
@@ -75,7 +75,7 @@ describe "Code gen: tuple" do
 
   it "codegens tuple [1..0]" do
     run(<<-CRYSTAL).to_b.should be_true
-      #{range_new}
+      require "range_literal"
 
       def empty(*args)
         args
@@ -87,7 +87,7 @@ describe "Code gen: tuple" do
 
   it "codegens tuple [2..2]" do
     run(<<-CRYSTAL).to_b.should be_true
-      #{range_new}
+      require "range_literal"
 
       def empty(*args)
         args
@@ -99,7 +99,7 @@ describe "Code gen: tuple" do
 
   it "codegens tuple [0..0]?" do
     run(<<-CRYSTAL).to_b.should be_true
-      #{range_new}
+      require "range_literal"
 
       val = {1, true}[0..0]?
       val.is_a?(Tuple(Int32)) && val[0] == 1
@@ -108,7 +108,7 @@ describe "Code gen: tuple" do
 
   it "codegens tuple [0..1]?" do
     run(<<-CRYSTAL).to_b.should be_true
-      #{range_new}
+      require "range_literal"
 
       val = {1, true}[0..1]?
       val.is_a?(Tuple(Int32, Bool)) && val[0] == 1 && val[1] == true
@@ -117,7 +117,7 @@ describe "Code gen: tuple" do
 
   it "codegens tuple [0..2]?" do
     run(<<-CRYSTAL).to_b.should be_true
-      #{range_new}
+      require "range_literal"
 
       val = {1, true}[0..2]?
       val.is_a?(Tuple(Int32, Bool)) && val[0] == 1&& val[1] == true
@@ -126,7 +126,7 @@ describe "Code gen: tuple" do
 
   it "codegens tuple [1..1]?" do
     run(<<-CRYSTAL).to_b.should be_true
-      #{range_new}
+      require "range_literal"
 
       val = {1, true}[1..1]?
       val.is_a?(Tuple(Bool)) && val[0] == true
@@ -135,7 +135,7 @@ describe "Code gen: tuple" do
 
   it "codegens tuple [1..0]?" do
     run(<<-CRYSTAL).to_b.should be_true
-      #{range_new}
+      require "range_literal"
 
       def empty(*args)
         args
@@ -147,7 +147,7 @@ describe "Code gen: tuple" do
 
   it "codegens tuple [2..2]?" do
     run(<<-CRYSTAL).to_b.should be_true
-      #{range_new}
+      require "range_literal"
 
       def empty(*args)
         args
@@ -158,24 +158,24 @@ describe "Code gen: tuple" do
   end
 
   it "codegens tuple [3..2]?" do
-    run("#{range_new}; {1, true}[3..2]?.nil?").to_b.should be_true
+    run("require \"range_literal\"; {1, true}[3..2]?.nil?").to_b.should be_true
   end
 
   it "codegens tuple [-3..2]?" do
-    run("#{range_new}; {1, true}[-3..2]?.nil?").to_b.should be_true
+    run("require \"range_literal\"; {1, true}[-3..2]?.nil?").to_b.should be_true
   end
 
   it "codegens tuple metaclass [0..0]" do
-    run("#{range_new}; Tuple(Int32, Char)[0..0].is_a?(Tuple(Int32).class)").to_b.should be_true
+    run("require \"range_literal\"; Tuple(Int32, Char)[0..0].is_a?(Tuple(Int32).class)").to_b.should be_true
   end
 
   it "codegens tuple metaclass [0..1]" do
-    run("#{range_new}; Tuple(Int32, Char)[0..1].is_a?(Tuple(Int32, Char).class)").to_b.should be_true
+    run("require \"range_literal\"; Tuple(Int32, Char)[0..1].is_a?(Tuple(Int32, Char).class)").to_b.should be_true
   end
 
   it "codegens tuple metaclass [1..0]" do
     run(<<-CRYSTAL).to_b.should be_true
-      #{range_new}
+      require "range_literal"
 
       def empty(*args)
         args.class
@@ -186,7 +186,7 @@ describe "Code gen: tuple" do
   end
 
   it "codegens tuple metaclass [3..2]?" do
-    run("#{range_new}; Tuple(Int32, Char)[3..2]?.nil?").to_b.should be_true
+    run("require \"range_literal\"; Tuple(Int32, Char)[3..2]?.nil?").to_b.should be_true
   end
 
   it "codegens splats inside tuples" do
@@ -514,12 +514,18 @@ describe "Code gen: tuple" do
   end
 
   it "downcasts union to mixed union with mixed tuple types" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      fun __crystal_raise_cast_failed(from_type : Void*, to_type : Void*, location : Void*) : NoReturn
+        LibC.exit(99)
+      end
 
       t = {1} || 2 || {true}
       t = {1} || 2
-      t.as(Tuple)[0]
+      LibC.exit(t.as(Tuple)[0])
       CRYSTAL
   end
 
@@ -557,13 +563,4 @@ describe "Code gen: tuple" do
       bar(nil)
       CRYSTAL
   end
-end
-
-private def range_new
-  %(
-    struct Range(B, E)
-      def initialize(@begin : B, @end : E, @exclusive : Bool = false)
-      end
-    end
-  )
 end

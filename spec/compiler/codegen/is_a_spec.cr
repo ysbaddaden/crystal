@@ -283,7 +283,7 @@ describe "Codegen: is_a?" do
 
   it "codegens is_a? with a Const does comparison and gives true" do
     run(<<-CRYSTAL).to_b.should be_true
-      require "prelude"
+      require "int32_case_equality"
       CONST = 1
       1.is_a?(CONST)
       CRYSTAL
@@ -291,7 +291,7 @@ describe "Codegen: is_a?" do
 
   it "codegens is_a? with a Const does comparison and gives false" do
     run(<<-CRYSTAL).to_b.should be_false
-      require "prelude"
+      require "int32_case_equality"
       CONST = 1
       2.is_a?(CONST)
       CRYSTAL

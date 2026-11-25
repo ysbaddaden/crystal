@@ -224,7 +224,7 @@ describe "Code gen: struct" do
 
   it "builds struct setter with fun type (1)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "cleanup_raise"
 
       lib LibC
         struct Foo
@@ -239,7 +239,7 @@ describe "Code gen: struct" do
 
   it "builds struct setter with fun type (2)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "cleanup_raise"
 
       lib LibC
         struct Foo
@@ -247,7 +247,7 @@ describe "Code gen: struct" do
         end
       end
 
-      foo = Pointer(LibC::Foo).malloc(1)
+      foo = Pointer(LibC::Foo).malloc(1_u64)
       foo.value.x = -> { }
       CRYSTAL
   end

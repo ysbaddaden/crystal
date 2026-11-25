@@ -539,8 +539,12 @@ describe "Code gen: generic class type" do
   end
 
   it "codegens compile-time interpreted generic int128" do
-    run(<<-CRYSTAL).to_i.should eq(4)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(4)
+      require "checked_overflow"
+
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
 
       CONST = 1_i128 + 2_i128
       class Foo(T)
@@ -555,7 +559,7 @@ describe "Code gen: generic class type" do
       class Bar < Foo(CONST)
       end
 
-      Bar.new.t_incr
+      LibC.exit(Bar.new.t_incr.to_i32)
       CRYSTAL
   end
 end

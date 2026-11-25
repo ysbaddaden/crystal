@@ -84,7 +84,7 @@ describe "Code gen: no return" do
 
   it "codegens untyped typeof (#5105)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "cleanup_raise"
 
       typeof(raise("").foo)
       CRYSTAL

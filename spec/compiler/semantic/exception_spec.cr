@@ -41,7 +41,7 @@ describe "Semantic: exception" do
 
   it "type for exception handler for explicit types" do
     assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+      require "semantic_exception"
 
       class MyEx < Exception
       end

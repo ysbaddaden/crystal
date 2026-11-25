@@ -299,7 +299,7 @@ describe "Semantic: named tuples" do
 
   it "doesn't crash on named tuple in not executed block (#6718)" do
     assert_type(<<-CRYSTAL) { nil_type }
-      require "prelude"
+      require "cleanup_raise"
 
       def pending(&block)
       end

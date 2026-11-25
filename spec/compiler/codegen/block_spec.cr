@@ -901,7 +901,7 @@ describe "Code gen: block" do
 
   it "codegens dispatch with block and break (1)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "checked_overflow"
 
       class Foo(T)
         def initialize(@x : T)

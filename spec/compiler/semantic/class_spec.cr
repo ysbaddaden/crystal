@@ -1168,8 +1168,8 @@ describe "Semantic: class" do
   end
 
   it "types as no return if calling method on abstract class with all abstract subclasses (#6996)" do
-    assert_type(<<-CRYSTAL) { no_return }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { no_return }
+      require "cleanup_raise"
 
       abstract class Foo
         abstract def foo?
@@ -1183,8 +1183,8 @@ describe "Semantic: class" do
   end
 
   it "types as no return if calling method on abstract class with generic subclasses but no instances (#6996)" do
-    assert_type(<<-CRYSTAL) { no_return }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { no_return }
+      require "cleanup_raise"
 
       abstract class Foo
         abstract def foo?
@@ -1201,8 +1201,8 @@ describe "Semantic: class" do
   end
 
   it "types as no return if calling method on abstract generic class (#6996)" do
-    assert_type(<<-CRYSTAL) { no_return }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { no_return }
+      require "cleanup_raise"
 
       abstract class Foo(T)
         abstract def foo?
@@ -1213,8 +1213,8 @@ describe "Semantic: class" do
   end
 
   it "types as no return if calling method on generic class with subclasses (#6996)" do
-    assert_type(<<-CRYSTAL) { no_return }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { no_return }
+      require "cleanup_raise"
 
       abstract class Foo(T)
         abstract def foo?

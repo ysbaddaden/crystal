@@ -250,10 +250,14 @@ describe "Code gen: pointer" do
   end
 
   it "gets pointer to constant" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "single_threaded_once"
+
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
       FOO = 1
-      pointerof(FOO).value
+      LibC.exit(pointerof(FOO).value)
       CRYSTAL
   end
 
