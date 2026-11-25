@@ -14,7 +14,7 @@ describe "Code gen: case" do
   end
 
   it "codegens case without whens but else" do
-    run("require \"prelude\"; case 1; else; 2; end").to_i.should eq(2)
+    run("case 1; else; 2; end").to_i.should eq(2)
   end
 
   it "codegens case that always returns" do

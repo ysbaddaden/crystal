@@ -255,8 +255,6 @@ describe "Semantic: super" do
 
   it "errors no superclass method" do
     assert_error <<-CRYSTAL, "undefined method 'foo'"
-      require "prelude"
-
       class Foo
         def foo(x)
           super

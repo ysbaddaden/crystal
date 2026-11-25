@@ -196,8 +196,6 @@ describe "Codegen: class var" do
 
   it "initializes dependent constant before class var" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
-
       def foo
         a = 1
         b = 2

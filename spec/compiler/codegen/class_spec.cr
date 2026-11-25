@@ -589,8 +589,6 @@ describe "Code gen: class" do
 
   it "allows using self in class scope" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
       class Foo
         def self.foo
           1

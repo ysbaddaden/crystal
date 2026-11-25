@@ -216,8 +216,6 @@ describe "Code gen: def" do
 
   it "use target def type as return type" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
       def foo
         if false
           return 0

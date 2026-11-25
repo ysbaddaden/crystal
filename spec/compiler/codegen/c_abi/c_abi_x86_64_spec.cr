@@ -79,8 +79,6 @@ describe "Code gen: C ABI x86_64" do
 
   it "passes struct between 64 and 128 bits as { i64, i64 } (with multiple modules/contexts)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
-
       lib LibFoo
         struct Struct
           x : Int64

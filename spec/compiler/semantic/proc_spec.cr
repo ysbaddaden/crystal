@@ -636,8 +636,6 @@ describe "Semantic: proc" do
 
   it "uses array argument of proc arg (4)" do
     assert_error <<-CRYSTAL, "expected block to return Foo, not Int32"
-      require "prelude"
-
       class Foo
       end
 

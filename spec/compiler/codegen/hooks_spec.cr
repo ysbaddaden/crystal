@@ -116,8 +116,6 @@ describe "Code gen: hooks" do
 
   it "does inherited macro before class body" do
     run(<<-CRYSTAL).to_i.should eq(123)
-      require "prelude"
-
       class Global
         @@x = 123
 
