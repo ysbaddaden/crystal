@@ -504,8 +504,18 @@ describe "Codegen: class var" do
   end
 
   it "doesn't crash with pointerof from another module" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      # Single-threaded once initialization for the class variable.
+      fun __crystal_once(flag : Bool*, initializer : Void*)
+        return if flag.value
+        callback = {initializer, Pointer(Void).new(0)}
+        pointerof(callback).as(Proc(Nil)*).value.call
+        flag.value = true
+      end
 
       class Foo
         @@x : Int32?
@@ -522,7 +532,7 @@ describe "Codegen: class var" do
         end
       end
 
-      Bar.bar
+      LibC.exit(Bar.bar || 99)
       CRYSTAL
   end
 
