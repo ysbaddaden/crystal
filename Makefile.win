@@ -232,7 +232,7 @@ $(O)\compiler_spec.exe: $(DEPS) $(SOURCES) $(SPEC_SOURCES)
 	$(call check_llvm_config)
 	@$(call MKDIR,"$(O)")
 	$(call export_vars)
-	.\bin\crystal build $(FLAGS) $(COMPILER_FLAGS) $(SPEC_WARNINGS_OFF) -o "$@" spec\compiler_spec.cr --release
+	.\bin\crystal build $(FLAGS) $(COMPILER_FLAGS) $(SPEC_WARNINGS_OFF) -o "$@" spec\compiler_spec.cr -O1
 
 $(O)\primitives_spec.exe: $(O)\crystal.exe $(DEPS) $(SOURCES) $(SPEC_SOURCES)
 	@$(call MKDIR,"$(O)")
