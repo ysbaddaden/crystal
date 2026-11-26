@@ -70,7 +70,7 @@ describe "Code gen: c union" do
 
   it "builds union setter with fun type" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "compiler_spec_prelude/exceptions"
 
       lib LibC
         union Foo
@@ -201,8 +201,9 @@ describe "Code gen: c union" do
   end
 
   it "moves unions around correctly (#12550)" do
-    run(<<-CRYSTAL).to_i.should eq((1..6).sum)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
+      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude/static_array"
 
       lib Lib
         struct Foo
@@ -222,7 +223,7 @@ describe "Code gen: c union" do
         a
       end
 
-      foo.padding.sum
+      LibC.exit(foo.padding.sum == #{(1..6).sum} ? 0 : 1)
       CRYSTAL
   end
 end

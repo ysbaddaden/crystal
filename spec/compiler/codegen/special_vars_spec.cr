@@ -16,8 +16,9 @@ describe "Codegen: special vars" do
     end
 
     it "codegens #{name} with nilable (1)" do
-      run(<<-CRYSTAL).to_string.should eq("ouch")
-        require "prelude"
+      result = link_and_run(<<-CRYSTAL)
+        require "compiler_spec_prelude/raise"
+        require "compiler_spec_prelude/nil"
 
         def foo
           if 1 == 2
@@ -27,17 +28,22 @@ describe "Codegen: special vars" do
 
         foo
 
-        begin
-          #{name}
-        rescue ex
-          "ouch"
-        end
+        result = begin
+                   #{name}
+                 rescue ex
+                   "ouch"
+                 end
+
+        LibC.puts result
         CRYSTAL
+      result.status.success?.should be_true
+      result.output.should eq("ouch\n")
     end
 
     it "codegens #{name} with nilable (2)" do
-      run(<<-CRYSTAL).to_string.should eq("foo")
-        require "prelude"
+      result = link_and_run(<<-CRYSTAL)
+        require "compiler_spec_prelude/raise"
+        require "compiler_spec_prelude/nil"
 
         def foo
           if 1 == 1
@@ -47,12 +53,16 @@ describe "Codegen: special vars" do
 
         foo
 
-        begin
-          #{name}
-        rescue ex
-          "ouch"
-        end
+        result = begin
+                   #{name}
+                 rescue ex
+                   "ouch"
+                 end
+
+        LibC.puts(result)
         CRYSTAL
+      result.status.success?.should be_true
+      result.output.should eq("foo\n")
     end
   end
 

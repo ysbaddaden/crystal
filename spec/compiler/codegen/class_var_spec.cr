@@ -165,7 +165,8 @@ describe "Codegen: class var" do
 
   it "initializes class var with array literal" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/once"
 
       class Foo
         @@var = [1, 2, 4]
@@ -504,8 +505,9 @@ describe "Codegen: class var" do
   end
 
   it "doesn't crash with pointerof from another module" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/lib_c"
 
       class Foo
         @@x : Int32?
@@ -522,7 +524,7 @@ describe "Codegen: class var" do
         end
       end
 
-      Bar.bar
+      LibC.exit(Bar.bar || 99)
       CRYSTAL
   end
 
@@ -604,8 +606,9 @@ describe "Codegen: class var" do
   end
 
   it "runs class var side effects (#8862)" do
-    run(<<-CRYSTAL).to_i.should eq(6)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/lib_c"
 
       class Foo
         @@x = 0
@@ -632,7 +635,7 @@ describe "Codegen: class var" do
         end
       end
 
-      a &+ Foo.x
+      LibC.exit(a &+ Foo.x)
       CRYSTAL
   end
 end

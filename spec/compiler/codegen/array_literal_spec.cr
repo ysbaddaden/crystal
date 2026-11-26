@@ -252,15 +252,20 @@ describe "Code gen: array literal spec" do
   end
 
   it "creates typed array" do
-    run("require \"prelude\"; typeof([1, 2] of Int8)").to_string.should eq("Array(Int8)")
+    run(<<-CRYSTAL).to_string.should eq("Array(Int8)")
+      require "compiler_spec_prelude/class"
+      require "compiler_spec_prelude/array"
+
+      typeof([1, 2] of Int8).name
+      CRYSTAL
   end
 
   it "assignment in array literal works" do
-    run("require \"prelude\"; [a = 1]; a").to_i.should eq(1)
+    run(%(require "compiler_spec_prelude/array"; [a = 1]; a)).to_i.should eq(1)
   end
 
   it "assignment in array-like literal works" do
-    run("require \"prelude\"; Array(Int32){a = 1}; a").to_i.should eq(1)
+    run(%(require "compiler_spec_prelude/array"; Array(Int32){a = 1}; a)).to_i.should eq(1)
   end
 end
 

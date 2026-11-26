@@ -205,8 +205,8 @@ describe "Semantic: def" do
   end
 
   it "lookups methods in super modules" do
-    assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
+      require "compiler_spec_prelude/array"
 
       module Foo
         def lookup_matches(x = 1)
@@ -422,7 +422,7 @@ describe "Semantic: def" do
 
   it "clones regex literal value (#2384)" do
     assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+      require "compiler_spec_prelude/regex"
 
       def foo(x : String = "")
         /\#{1}/

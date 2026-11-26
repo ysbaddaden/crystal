@@ -920,8 +920,10 @@ describe "Code gen: macro" do
   end
 
   it "recalculates method when virtual metaclass type is added" do
-    run(<<-CRYSTAL).to_string.should eq("Test, RunnableTest")
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/once"
 
       class Global
         @@x = [] of String
@@ -961,13 +963,14 @@ describe "Code gen: macro" do
       end
 
       run
-      Global.x.clear
+      Global.x = [] of String
 
       class RunnableTest < Test
       end
 
       run
-      Global.x.join(", ")
+      names = Global.x
+      LibC.exit(names.size == 2 && names[0] == "Test" && names[1] == "RunnableTest" ? 0 : 1)
       CRYSTAL
   end
 
@@ -1382,7 +1385,7 @@ describe "Code gen: macro" do
 
   it "can use macro inside array literal" do
     run(<<-CRYSTAL).to_i.should eq(42)
-      require "prelude"
+      require "compiler_spec_prelude/array"
 
       macro foo
         42
@@ -1395,7 +1398,7 @@ describe "Code gen: macro" do
 
   it "can use macro inside hash literal" do
     run(<<-CRYSTAL).to_i.should eq(42)
-      require "prelude"
+      require "compiler_spec_prelude/hash"
 
       macro foo
         42
@@ -1836,7 +1839,7 @@ describe "Code gen: macro" do
 
   it "gets default value of instance variable of generic type" do
     run(<<-CRYSTAL).to_i.should eq(10)
-      require "prelude"
+      require "compiler_spec_prelude/exceptions"
 
       struct Int32
         def self.foo
@@ -1903,8 +1906,9 @@ describe "Code gen: macro" do
   end
 
   it "expands macro with op assign inside assign (#5568)" do
-    run(<<-CRYSTAL).to_string.chomp.should eq("2")
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/hash"
+      require "compiler_spec_prelude/exceptions"
 
       macro expand
         {{ yield }}
@@ -1916,7 +1920,7 @@ describe "Code gen: macro" do
 
       expand do
         x = foo[:foo] += 1
-        puts x
+        LibC.exit(x)
       end
       CRYSTAL
   end

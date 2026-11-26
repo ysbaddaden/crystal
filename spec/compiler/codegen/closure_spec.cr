@@ -327,7 +327,7 @@ describe "Code gen: closure" do
 
   it "doesn't free closure memory (bug)" do
     run(<<-CRYSTAL).to_i.should eq(1249975000_i64)
-      require "prelude"
+      require "compiler_spec_prelude/array"
 
       def foo
         i = 0
@@ -632,7 +632,7 @@ describe "Code gen: closure" do
 
   it "doesn't form a closure if invoking class method" do
     run(<<-CRYSTAL).to_b.should be_false
-      require "prelude"
+      require "compiler_spec_prelude/proc"
 
       class Foo
         def self.foo
@@ -649,7 +649,7 @@ describe "Code gen: closure" do
 
   it "doesn't form a closure if invoking class method with self" do
     run(<<-CRYSTAL).to_b.should be_false
-      require "prelude"
+      require "compiler_spec_prelude/proc"
 
       class Foo
         def self.foo
@@ -738,8 +738,7 @@ describe "Code gen: closure" do
 
   it "allows passing an external function along" do
     codegen(<<-CRYSTAL)
-      require "prelude"
-
+      require "compiler_spec_prelude/exceptions"
 
       lib LibA
         fun a(a : Void* -> Void*)

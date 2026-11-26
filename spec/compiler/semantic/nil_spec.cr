@@ -19,7 +19,9 @@ describe "Semantic: nil" do
 
   it "marks instance variables as nil but doesn't explode on macros" do
     assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+      require "primitives"
+      require "object/properties"
+      require "compiler_spec_prelude/array"
 
       class Foo
         getter :var

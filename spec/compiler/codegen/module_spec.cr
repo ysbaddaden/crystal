@@ -130,7 +130,7 @@ describe "Code gen: module" do
 
   it "codegens pointer of module with block" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "compiler_spec_prelude/nil"
 
       module Moo
       end
@@ -229,7 +229,7 @@ describe "Code gen: module" do
 
   it "codegens proc of a module that was never included" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "compiler_spec_prelude/exceptions"
 
       module Moo
       end
@@ -258,8 +258,8 @@ describe "Code gen: module" do
   end
 
   it "invokes method on yielded module that has no instances (#1079)" do
-    run(<<-CRYSTAL).to_i.should eq(456)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
+      require "compiler_spec_prelude/raise"
 
       module Mod
       end
@@ -267,12 +267,13 @@ describe "Code gen: module" do
       def foo
         ptr = Pointer(Mod).malloc(1_u64)
         yield ptr.value
-        123
+        5
       rescue
-        456
+        6
       end
 
-      foo { |x| x.coco }
+      rs = foo { |x| x.coco }
+      LibC.exit(rs)
       CRYSTAL
   end
 
@@ -532,8 +533,8 @@ describe "Code gen: module" do
   end
 
   it "casts to union of module that is included in other module (#3323)" do
-    run(<<-CRYSTAL).to_i.should eq(10)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
+      require "compiler_spec_prelude/exceptions"
 
       module Moo
         def moo
@@ -560,13 +561,13 @@ describe "Code gen: module" do
       end
 
       bar = Bar.new.as(Int32 | Moo)
-      bar.as(Moo).moo
+      LibC.exit(bar.as(Moo).moo)
       CRYSTAL
   end
 
   it "casts to union of generic module that is included in other module (#3323)" do
-    run(<<-CRYSTAL).to_i.should eq(10)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
+      require "compiler_spec_prelude/exceptions"
 
       module Moo(T)
         def moo
@@ -593,7 +594,7 @@ describe "Code gen: module" do
       end
 
       bar = Bar.new.as(Int32 | Moo(Char))
-      bar.as(Moo(Char)).moo
+      LibC.exit(bar.as(Moo(Char)).moo)
       CRYSTAL
   end
 

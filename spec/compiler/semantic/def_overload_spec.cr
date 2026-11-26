@@ -748,8 +748,9 @@ describe "Semantic: def overload" do
   end
 
   it "matches types with free variables" do
-    assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
+      require "compiler_spec_prelude/array"
+
       def foo(x : Array(T), y : T) forall T
         1
       end
@@ -784,8 +785,9 @@ describe "Semantic: def overload" do
   end
 
   it "prefers more specific overload than one with free variables" do
-    assert_type(<<-CRYSTAL) { float64 }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { float64 }
+      require "compiler_spec_prelude/array"
+
       def foo(x : Array(T), y : T)
         1
       end
@@ -1006,8 +1008,10 @@ describe "Semantic: def overload" do
   end
 
   it "matches on partial union" do
-    assert_type(<<-CRYSTAL) { union_of(int32, char) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { union_of(int32, char) }
+      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude/float"
+      require "compiler_spec_prelude/int"
 
       def foo(x : Int32 | Float64)
         x.abs
@@ -1066,8 +1070,9 @@ describe "Semantic: def overload" do
   end
 
   it "matches generic class instance type with another one" do
-    assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
+      require "compiler_spec_prelude/array"
+
       class Foo
       end
 

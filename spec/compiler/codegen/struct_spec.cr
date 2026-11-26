@@ -455,8 +455,8 @@ describe "Code gen: struct" do
   end
 
   it "codegens virtual struct metaclass (#2551) (4)" do
-    run(<<-CRYSTAL).to_i.should eq(42)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(42)
+      require "compiler_spec_prelude/raise"
 
       abstract struct Foo
         def initialize
@@ -478,7 +478,7 @@ describe "Code gen: struct" do
       struct Baz < Foo
       end
 
-      (Bar || Baz).new.x
+      LibC.exit((Bar || Baz).new.x)
       CRYSTAL
   end
 
@@ -585,8 +585,8 @@ describe "Code gen: struct" do
   end
 
   it "can cast virtual struct to specific struct" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-       require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+       require "compiler_spec_prelude/exceptions"
 
        abstract struct Foo
        end
@@ -604,7 +604,7 @@ describe "Code gen: struct" do
        end
 
        x = Bar.new || Baz.new
-       x.as(Bar).foo
+       LibC.exit(x.as(Bar).foo)
        CRYSTAL
   end
 
@@ -628,8 +628,8 @@ describe "Code gen: struct" do
   end
 
   it "can call new on abstract struct with single child (#7309)" do
-    codegen(<<-CRYSTAL, inject_primitives: false)
-      require "prelude"
+    codegen(<<-CRYSTAL)
+      require "compiler_spec_prelude/exceptions"
 
       abstract struct Foo
         @x = 1

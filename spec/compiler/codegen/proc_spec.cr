@@ -51,8 +51,9 @@ describe "Code gen: proc" do
   end
 
   it "call proc pointer of instance method that raises" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/raise"
+
       class Foo
         def coco
           raise "foo"
@@ -61,7 +62,9 @@ describe "Code gen: proc" do
 
       foo = Foo.new
       f = ->foo.coco
-      f.call rescue 1
+      result = f.call rescue 1
+
+      LibC.exit(result)
       CRYSTAL
   end
 
@@ -172,8 +175,11 @@ describe "Code gen: proc" do
   end
 
   it "allows passing proc type to C automatically" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/proc"
+      require "compiler_spec_prelude/int"
 
       lib LibC
         fun qsort(base : Void*, nel : LibC::SizeT, width : LibC::SizeT, callback : (Void*, Void* -> Int32))
@@ -181,11 +187,11 @@ describe "Code gen: proc" do
 
       ary = [3, 1, 4, 2]
       LibC.qsort(ary.to_unsafe.as(Void*), LibC::SizeT.new(ary.size), LibC::SizeT.new(sizeof(Int32)), ->(a : Void*, b : Void*) {
-        a = a.as(Int32*)
-        b = b.as(Int32*)
-        a.value <=> b.value
+        a = a.as(Int32*).value
+        b = b.as(Int32*).value
+        a > b ? 1 : (a < b ? -1 : 0)
       })
-      ary[0]
+      LibC.exit(ary[0] == 1 ? 0 : 1)
       CRYSTAL
   end
 
@@ -568,7 +574,8 @@ describe "Code gen: proc" do
 
   it "codegens proc that accepts array of type" do
     run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+      require "compiler_spec_prelude/proc"
+      require "compiler_spec_prelude/array"
 
       class Foo
         def foo
@@ -708,7 +715,7 @@ describe "Code gen: proc" do
 
   it "codegens proc to implicit self in constant (#647)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "compiler_spec_prelude/once"
 
       module Foo
         def self.blah
@@ -767,8 +774,9 @@ describe "Code gen: proc" do
   end
 
   it "uses alias of proc with virtual type (#1347)" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/hash"
+      require "compiler_spec_prelude/once"
 
       class Class1
         def foo
@@ -811,7 +819,7 @@ describe "Code gen: proc" do
 
       Foo.call
 
-      Global.x
+      LibC.exit(Global.x)
       CRYSTAL
   end
 
@@ -960,14 +968,14 @@ describe "Code gen: proc" do
   end
 
   it "calls function pointer" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/exceptions"
 
       fun foo(f : Int32 -> Int32) : Int32
         f.call(1)
       end
 
-      foo(->(x : Int32) { x &+ 1 })
+      LibC.exit(foo(->(x : Int32) { x &+ 1 }))
       CRYSTAL
   end
 
@@ -1041,20 +1049,30 @@ describe "Code gen: proc" do
   end
 
   it "raises if returning closure from top-level fun (#14691)" do
-    run(<<-CRYSTAL).to_b.should be_true
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude/bool"
 
       @[Raises]
       fun foo(x : Int32) : -> Int32
         -> { x }
       end
 
-      begin
-        foo(1)
-      rescue
-        true
+      result = begin
+                 foo(1)
+               rescue
+                 true
+               else
+                 false
+               end
+
+      case result
+      when true
+        LibC.exit(0)
+      when false
+        LibC.exit(1)
       else
-        false
+        LibC.exit(2)
       end
       CRYSTAL
   end

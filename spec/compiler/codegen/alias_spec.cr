@@ -2,50 +2,80 @@ require "../../spec_helper"
 
 describe "Code gen: alias" do
   it "invokes methods on empty array of recursive alias (1)" do
-    run(<<-CRYSTAL).to_string.should eq("")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/string"
+
+      class Object
+        def to_s
+          "."
+        end
+      end
 
       alias Alias = Array(Alias)
 
       a = [] of Alias
-      b = a.map(&.to_s).join
+      a.map(&.to_s).each { |s| LibC.puts(s) }
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should eq("")
   end
 
   it "invokes methods on empty array of recursive alias (2)" do
-    run(<<-CRYSTAL).to_string.should eq("")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/string"
+
+      class Object
+        def to_s
+          "."
+        end
+      end
 
       alias Alias = Nil | Array(Alias)
 
       a = [] of Alias
-      b = a.map(&.to_s).join
+      a.map(&.to_s).each { |s| LibC.puts(s) }
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should eq("")
   end
 
   it "invokes methods on empty array of recursive alias (3)" do
-    run(<<-CRYSTAL).to_string.should eq("")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/string"
+
+      class Object
+        def to_s
+          "."
+        end
+      end
 
       alias Alias = Nil | Array(Alias)
 
       a = [] of Alias
-      b = a.map(&.to_s).join
+      a.map(&.to_s).each { |s| LibC.puts(s) }
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should eq("")
   end
 
   it "casts to recursive alias" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       class Bar(T)
       end
 
       alias Foo = Int32 | Bar(Foo)
 
-      a = 1.as(Foo)
+      a = 2.as(Foo)
       b = a.as(Int32)
-      b
+      LibC.exit(b)
       CRYSTAL
   end
 

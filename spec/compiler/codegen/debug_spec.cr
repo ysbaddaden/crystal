@@ -77,16 +77,18 @@ describe "Code gen: debug" do
 
   it "codegens correct debug info for untyped expression (#4007 and #4008)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "prelude"
+      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude/int"
+      require "compiler_spec_prelude/string"
 
       int = 3
       case int
       when 0
-          puts 0
+        LibC.puts "0"
       when 1, 2, Int32
-          puts "1 | 2 | Int32"
+        LibC.puts "1 | 2 | Int32"
       else
-          puts int
+        LibC.puts int
       end
       CRYSTAL
   end
@@ -108,7 +110,7 @@ describe "Code gen: debug" do
 
   it "correctly restores debug location after fun change (#4254)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "prelude"
+      require "compiler_spec_prelude/once"
 
       class Foo
         def self.one
@@ -117,7 +119,7 @@ describe "Code gen: debug" do
         end
 
         def self.three
-          1 + 2
+          1 &+ 2
         end
 
         def two(&block)
@@ -134,7 +136,7 @@ describe "Code gen: debug" do
 
   it "has correct debug location after constant initialization in call with block (#4719)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "prelude"
+      require "compiler_spec_prelude/once"
 
       fun __crystal_malloc_atomic(size : UInt32) : Void*
         x = uninitialized Void*
@@ -222,7 +224,7 @@ describe "Code gen: debug" do
 
   it "emits global debug info once for constants read before assignment" do
     mod = codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "prelude"
+      require "compiler_spec_prelude/once"
 
       struct Bar
         def initialize(@x : Int32)
@@ -274,7 +276,7 @@ describe "Code gen: debug" do
 
   it "stores and restores debug location after jumping to main (#6920)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "prelude"
+      require "compiler_spec_prelude/once"
 
       Module.method
 
@@ -325,7 +327,7 @@ describe "Code gen: debug" do
 
   it "doesn't fail on constant read calls (#11416)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "prelude"
+      require "compiler_spec_prelude/once"
 
       class Foo
         def foo

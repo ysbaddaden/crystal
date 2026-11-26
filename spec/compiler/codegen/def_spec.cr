@@ -55,8 +55,9 @@ describe "Code gen: def" do
   end
 
   it "unifies all calls to same def" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/exceptions"
 
       def raise(msg)
         nil
@@ -82,7 +83,7 @@ describe "Code gen: def" do
 
       hash = Hash2.new
       hash[1] = 2
-      hash[1]
+      LibC.exit(hash[1])
       CRYSTAL
   end
 
@@ -152,7 +153,7 @@ describe "Code gen: def" do
 
   it "codegens and doesn't break if obj is int and there's a mutation" do
     run(<<-CRYSTAL)
-      require "prelude"
+      require "compiler_spec_prelude/array"
 
       struct Int
         def baz(x)

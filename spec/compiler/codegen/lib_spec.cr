@@ -44,10 +44,16 @@ describe "Code gen: lib" do
 
   it "allows passing type to LibC if it has a converter with to_unsafe (bug)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "compiler_spec_prelude/string"
 
       lib LibC
         fun foo(x : UInt8*)
+      end
+
+      struct Int32
+        def to_s : String
+          "1"
+        end
       end
 
       def foo

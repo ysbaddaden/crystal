@@ -177,7 +177,7 @@ describe "Code gen: if" do
 
   it "codegens if with nested if that raises" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "compiler_spec_prelude/exceptions"
 
       struct Nil; def to_i; 0; end; end
 
@@ -194,7 +194,7 @@ describe "Code gen: if" do
 
   it "codegens if with return in else preserves type filter" do
     run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+      require "compiler_spec_prelude/exceptions"
 
       def foo
         x = 1 || nil

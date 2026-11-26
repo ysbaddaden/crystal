@@ -320,7 +320,7 @@ describe "Code gen: block" do
 
   it "call block from dispatch and use local vars" do
     run(<<-CRYSTAL).to_i.should eq(4)
-      require "prelude"
+      require "compiler_spec_prelude/exceptions"
 
       def bar(y)
         yield y
@@ -361,10 +361,11 @@ describe "Code gen: block" do
 
   it "break block with yielder inside while" do
     run(<<-CRYSTAL).to_i.should eq(6)
-      require "prelude"
+      require "compiler_spec_prelude/int"
+
       a = 0
       10.times do
-        a += 1
+        a &+= 1
         break if a > 5
       end
       a
@@ -435,9 +436,13 @@ describe "Code gen: block" do
   end
 
   it "break from block with value" do
-    run(<<-CRYSTAL).to_i.should eq(20)
-      require "prelude"
-      10.times { break 20 }
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(20)
+      require "primitives"
+      require "compiler_spec_prelude/int"
+      require "compiler_spec_prelude/lib_c"
+
+      result = 10.times { break 20 }
+      LibC.exit(result || 0)
       CRYSTAL
   end
 
@@ -901,7 +906,7 @@ describe "Code gen: block" do
 
   it "codegens dispatch with block and break (1)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "compiler_spec_prelude/exceptions"
 
       class Foo(T)
         def initialize(@x : T)
@@ -924,7 +929,8 @@ describe "Code gen: block" do
 
   it "codegens dispatch with block and break (2)" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/exceptions"
 
       a = [1, 2, 3] || [1.5]
       n = 0
@@ -1026,7 +1032,8 @@ describe "Code gen: block" do
 
   it "uses block inside array literal (bug)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/int"
 
       def foo
         yield 1
@@ -1602,11 +1609,17 @@ describe "Code gen: block" do
   end
 
   it "codegens proc forwarding from an unused yielded block value (#17125)" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/array"
 
-      private record Foo,
-        proc : String ->
+      private struct Foo
+        def initialize(@proc : String ->)
+        end
+
+        def proc
+          @proc
+        end
+      end
 
       def bar(&proc : String ->)
         baz(&proc)
@@ -1619,7 +1632,7 @@ describe "Code gen: block" do
         bar(&foo.proc)
       end
 
-      1
+      LibC.exit(1)
       CRYSTAL
   end
 

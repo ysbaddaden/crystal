@@ -2,6 +2,9 @@
 
 Crystal::Config.path = "#{__DIR__}/../src"
 
+# Compiler inputs can explicitly load the minimal core types in compiler_spec_prelude.
+COMPILER_SPEC_SUPPORT_PATH = "#{__DIR__}/support"
+
 require "spec"
 
 require "compiler/requires"
@@ -260,6 +263,7 @@ end
 
 private def new_program(flags = nil)
   program = Program.new
+  program.crystal_path.entries << COMPILER_SPEC_SUPPORT_PATH
   program.color = false
   if flags
     program.user_flags.concat(flags)
@@ -313,8 +317,16 @@ class Crystal::SpecRunOutput
   end
 end
 
+private class SpecCompiler < Compiler
+  private def new_program(sources)
+    program = super
+    program.crystal_path.entries << COMPILER_SPEC_SUPPORT_PATH
+    program
+  end
+end
+
 def create_spec_compiler
-  compiler = Compiler.new
+  compiler = SpecCompiler.new
   if (n_threads = spec_compiler_threads)
     compiler.n_threads = n_threads
   end

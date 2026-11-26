@@ -256,8 +256,9 @@ describe "Code gen: generic class type" do
   end
 
   it "uses big integer as generic type argument (#2353)" do
-    run(<<-CRYSTAL).to_u64.should eq(2374623294237463578)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude/int"
 
       MIN_RANGE = -2374623294237463578
       MAX_RANGE = -MIN_RANGE
@@ -268,7 +269,7 @@ describe "Code gen: generic class type" do
         end
       end
 
-      Hello(MAX_RANGE).t
+      LibC.exit(Hello(MAX_RANGE).t == 2374623294237463578 ? 0 : 1)
       CRYSTAL
   end
 
@@ -354,8 +355,9 @@ describe "Code gen: generic class type" do
   end
 
   it "recomputes two calls that look the same due to generic type being instantiated (#7728)" do
-    run(<<-CRYSTAL).to_string.should eq("hello")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude/string"
 
       abstract class Base
       end
@@ -376,8 +378,10 @@ describe "Code gen: generic class type" do
 
       foo(Gen.new(1) || Gen.new(1.5))
       foo(Gen.new(true) || Gen.new(1_u8))
-      foo(Gen.new("hello") || Gen.new('z')).as(String)
+      LibC.puts(foo(Gen.new("hello") || Gen.new('z')).as(String).to_unsafe)
       CRYSTAL
+    result.status.exit_code.should eq(0)
+    result.output.should eq("hello\n")
   end
 
   it "doesn't consider abstract types for including types (#7200)" do
@@ -451,7 +455,7 @@ describe "Code gen: generic class type" do
 
   it "doesn't crash on generic type restriction with no subtypes (#7583)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "compiler_spec_prelude/exceptions"
 
       class Foo
       end
@@ -539,8 +543,8 @@ describe "Code gen: generic class type" do
   end
 
   it "codegens compile-time interpreted generic int128" do
-    run(<<-CRYSTAL).to_i.should eq(4)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(4)
+      require "compiler_spec_prelude/exceptions"
 
       CONST = 1_i128 + 2_i128
       class Foo(T)
@@ -555,7 +559,7 @@ describe "Code gen: generic class type" do
       class Bar < Foo(CONST)
       end
 
-      Bar.new.t_incr
+      LibC.exit(Bar.new.t_incr.to_i32)
       CRYSTAL
   end
 end

@@ -572,8 +572,8 @@ describe "Semantic: proc" do
   end
 
   it "uses array argument of proc arg (1)" do
-    assert_type(<<-CRYSTAL) { nil_type }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { nil_type }
+      require "compiler_spec_prelude/array"
 
       class Foo
       end
@@ -591,8 +591,8 @@ describe "Semantic: proc" do
   end
 
   it "uses array argument of proc arg (2)" do
-    assert_type(<<-CRYSTAL) { proc_of(array_of(types["Foo"].virtual_type), types["Foo"].virtual_type) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { proc_of(array_of(types["Foo"].virtual_type), types["Foo"].virtual_type) }
+      require "compiler_spec_prelude/array"
 
       class Foo
       end
@@ -611,14 +611,16 @@ describe "Semantic: proc" do
   end
 
   it "uses array argument of proc arg (3)" do
-    assert_type(<<-CRYSTAL) { proc_of(array_of(types["Foo"].virtual_type), types["Foo"].virtual_type) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { proc_of(array_of(types["Foo"].virtual_type), types["Foo"].virtual_type) }
+      require "compiler_spec_prelude/array"
 
       class Foo
       end
 
       class Bar < Foo
-        getter value
+        def value
+          @value
+        end
 
         def initialize(@value : Int32)
         end
@@ -652,8 +654,8 @@ describe "Semantic: proc" do
   end
 
   it "doesn't let passing an non-covariant generic argument" do
-    assert_error <<-CRYSTAL, "no overload matches"
-      require "prelude"
+    assert_error <<-CRYSTAL, "no overload matches", inject_primitives: true
+      require "compiler_spec_prelude/array"
 
       class Foo
       end

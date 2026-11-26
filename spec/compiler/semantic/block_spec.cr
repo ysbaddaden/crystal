@@ -369,10 +369,13 @@ describe "Block inference" do
   end
 
   it "checks block type with virtual type" do
-    assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
+      require "compiler_spec_prelude/array"
 
       class Foo
+        def to_s
+          "foo"
+        end
       end
 
       class Bar < Foo
@@ -388,8 +391,8 @@ describe "Block inference" do
   end
 
   it "maps block of union types to union types" do
-    assert_type(<<-CRYSTAL) { array_of(union_of(types["Foo1"].virtual_type, types["Foo2"].virtual_type)) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { array_of(union_of(types["Foo1"].virtual_type, types["Foo2"].virtual_type)) }
+      require "compiler_spec_prelude/array"
 
       class Foo1
       end
@@ -455,7 +458,7 @@ describe "Block inference" do
 
   it "allows yielding multiple types when a union is expected" do
     assert_type(<<-CRYSTAL) { array_of(float64) }
-      require "prelude"
+      require "compiler_spec_prelude/array"
 
       class Foo
         include Enumerable(Int32 | Float64)
@@ -467,7 +470,7 @@ describe "Block inference" do
       end
 
       foo = Foo.new
-      foo.map &.to_f
+      foo.map &.to_f64
       CRYSTAL
   end
 
@@ -672,7 +675,7 @@ describe "Block inference" do
 
   it "passes #262" do
     assert_type(<<-CRYSTAL) { array_of(bool) }
-      require "prelude"
+      require "compiler_spec_prelude/hash"
 
       h = {} of String => Int32
       h.map { true }
@@ -828,20 +831,20 @@ describe "Block inference" do
 
   it "types recursive hash assignment" do
     assert_type(<<-CRYSTAL) { array_of int32 }
-      require "prelude"
+      require "compiler_spec_prelude/hash"
 
-      class Hash
+      class Hash(K, V)
         def map
-          ary = Array(typeof(yield first_key, first_value)).new(@size)
-          each do |k, v|
-            ary.push yield k, v
-          end
+          key = uninitialized K
+          value = uninitialized V
+          ary = Array(typeof(yield key, value)).new
+          each { |k, v| ary.push yield k, v }
           ary
         end
       end
 
       hash = {} of Int32 => Int32
-      z = hash.map {|key| key + 1 }
+      z = hash.map { |key| key + 1 }
       hash[1] = z.size
       z
       CRYSTAL

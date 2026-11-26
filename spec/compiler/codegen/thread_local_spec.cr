@@ -26,8 +26,8 @@ describe "Codegen: thread local" do
   end
 
   it "works with class variable in main thread" do
-    run(<<-CRYSTAL).to_i.should eq(123)
-    require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(123)
+    require "compiler_spec_prelude/lib_c"
 
     class Foo
       @[ThreadLocal]
@@ -38,7 +38,7 @@ describe "Codegen: thread local" do
       end
     end
 
-    Foo.a
+    LibC.exit(Foo.a)
     CRYSTAL
   end
 

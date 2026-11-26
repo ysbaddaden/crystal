@@ -82,7 +82,14 @@ describe "Codegen: const" do
   end
 
   it "invokes block in const" do
-    run("require \"prelude\"; CONST = [\"1\"].map { |x| x.to_i }; CONST[0]").to_i.should eq(1)
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/string"
+
+      CONST = ["1"].map { |value| value == "1" ? 0 : 1 }
+      LibC.exit(CONST[0])
+      CRYSTAL
   end
 
   it "declare constants in right order" do
@@ -157,8 +164,10 @@ describe "Codegen: const" do
   end
 
   it "initialize const that might raise an exception" do
-    run(<<-CRYSTAL).to_b.should be_true
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
+      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude/once"
+
       CONST = (raise "OH NO" if 1 == 2)
 
       def doit
@@ -166,13 +175,13 @@ describe "Codegen: const" do
       rescue
       end
 
-      doit.nil?
+      LibC.exit(doit.nil? ? 0 : 1)
       CRYSTAL
   end
 
   it "allows implicit self in constant, called from another class (bug)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "compiler_spec_prelude/once"
 
       module Foo
         def self.foo
@@ -194,7 +203,8 @@ describe "Codegen: const" do
 
   it "codegens two consts with same variable name" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
+      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude/once"
 
       CONST1 = begin
             a = 1
@@ -269,7 +279,7 @@ describe "Codegen: const" do
 
   it "doesn't crash if constant is used, but class is never instantiated (#1106)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "compiler_spec_prelude/once"
 
       class Foo
         BAR = 1 || 2
@@ -285,11 +295,8 @@ describe "Codegen: const" do
 
   it "uses const before declaring it (hoisting)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
-      require "single_threaded_once"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/lib_c"
 
       x = CONST
 
@@ -306,8 +313,9 @@ describe "Codegen: const" do
   end
 
   it "uses const before declaring it in another module" do
-    run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/exceptions"
 
       def foo
         a = 1
@@ -325,7 +333,7 @@ describe "Codegen: const" do
 
       CONST = foo
 
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
@@ -351,31 +359,34 @@ describe "Codegen: const" do
   end
 
   it "gets pointerof constant" do
-    run(<<-CRYSTAL).to_i.should eq(10)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/lib_c"
 
       z = pointerof(FOO).value
       FOO = 10
-      z
+      LibC.exit(z)
       CRYSTAL
   end
 
   it "gets pointerof complex constant" do
-    run(<<-CRYSTAL).to_i.should eq(10)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/lib_c"
 
       z = pointerof(FOO).value
       FOO = begin
         a = 10
         a
       end
-      z
+      LibC.exit(z)
       CRYSTAL
   end
 
   it "gets pointerof constant inside class" do
-    run(<<-CRYSTAL).to_i.should eq(42)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(42)
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/lib_c"
 
       class Foo
         BAR = 42
@@ -391,7 +402,7 @@ describe "Codegen: const" do
         end
       end
 
-      Foo.new.z
+      LibC.exit(Foo.new.z)
       CRYSTAL
   end
 
@@ -505,8 +516,9 @@ describe "Codegen: const" do
   end
 
   it "runs const side effects (#8862)" do
-    run(<<-CRYSTAL).to_i.should eq(6)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/lib_c"
 
       class Foo
         @@x = 0
@@ -527,7 +539,7 @@ describe "Codegen: const" do
         1 &+ 2
       end
 
-      a &+ Foo.x
+      LibC.exit(a &+ Foo.x)
       CRYSTAL
   end
 
