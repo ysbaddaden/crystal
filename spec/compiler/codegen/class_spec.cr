@@ -939,12 +939,10 @@ describe "Code gen: class" do
   end
 
   it "can use a Main class (#1628)" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
       class Main
         def self.foo
-          1
+          0
         end
       end
 

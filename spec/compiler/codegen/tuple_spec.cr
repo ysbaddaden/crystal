@@ -514,12 +514,18 @@ describe "Code gen: tuple" do
   end
 
   it "downcasts union to mixed union with mixed tuple types" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      fun __crystal_raise_cast_failed(from_type : Void*, to_type : Void*, location : Void*) : NoReturn
+        LibC.exit(99)
+      end
 
       t = {1} || 2 || {true}
       t = {1} || 2
-      t.as(Tuple)[0]
+      LibC.exit(t.as(Tuple)[0])
       CRYSTAL
   end
 

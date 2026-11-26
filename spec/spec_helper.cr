@@ -322,6 +322,26 @@ def create_spec_compiler
   compiler
 end
 
+# Runs the source as a linked executable and returns its output and exit status.
+def link_and_run(code, *, prelude = "empty", debug = Crystal::Debug::None, flags = nil, file = __FILE__)
+  with_linked_executable(code, prelude: prelude, debug: debug, flags: flags, file: file) do |executable|
+    Process.capture_result(executable)
+  end
+end
+
+private def with_linked_executable(code, *, prelude, debug, flags, file, &)
+  compiler = create_spec_compiler
+  compiler.prelude = prelude
+  compiler.debug = debug
+  compiler.flags.concat flags if flags
+  apply_program_flags(compiler.flags)
+
+  with_temp_executable("crystal-spec-output", file: file) do |executable|
+    compiler.compile Compiler::Source.new("spec", code), executable
+    yield executable
+  end
+end
+
 def run(code, filename : String? = nil, inject_primitives = true, debug = Crystal::Debug::None, flags = nil, *, file = __FILE__) : LLVM::GenericValue | SpecRunOutput
   if inject_primitives
     code = %(require "primitives"\n#{code})
@@ -341,16 +361,8 @@ def run(code, filename : String? = nil, inject_primitives = true, debug = Crysta
     ast.expressions[-1] = exps
     code = ast.to_s
 
-    compiler = create_spec_compiler
-    compiler.debug = debug
-    compiler.flags.concat flags if flags
-    apply_program_flags(compiler.flags)
-
-    with_temp_executable("crystal-spec-output", file: file) do |output_filename|
-      compiler.compile Compiler::Source.new("spec", code), output_filename
-
-      output = Process.capture(output_filename)
-      return SpecRunOutput.new(output)
+    with_linked_executable(code, prelude: "prelude", debug: debug, flags: flags, file: file) do |executable|
+      SpecRunOutput.new(Process.capture(executable))
     end
   else
     program = new_program(flags)
