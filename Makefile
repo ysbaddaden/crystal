@@ -300,7 +300,7 @@ $(O)/std_spec$(EXE): $(DEPS) $(SOURCES) $(SPEC_SOURCES)
 $(O)/compiler_spec$(EXE): $(DEPS) $(SOURCES) $(SPEC_SOURCES)
 	$(call check_llvm_config)
 	@mkdir -p $(O)
-	$(EXPORT_CC) $(EXPORTS) ./bin/crystal build $(FLAGS) $(COMPILER_FLAGS) $(SPEC_WARNINGS_OFF) -o $@ spec/compiler_spec.cr --release
+	$(EXPORT_CC) $(EXPORTS) ./bin/crystal build $(FLAGS) $(COMPILER_FLAGS) $(SPEC_WARNINGS_OFF) -o $@ spec/compiler_spec.cr -O1
 
 $(O)/primitives_spec$(EXE): $(O)/$(CRYSTAL_BIN) $(DEPS) $(SOURCES) $(SPEC_SOURCES)
 	@mkdir -p $(O)
