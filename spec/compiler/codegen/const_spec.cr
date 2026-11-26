@@ -284,8 +284,12 @@ describe "Codegen: const" do
   end
 
   it "uses const before declaring it (hoisting)" do
-    run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
+      require "single_threaded_once"
+
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
 
       x = CONST
 
@@ -297,7 +301,7 @@ describe "Codegen: const" do
         a &+ b
       end
 
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
