@@ -20,4 +20,8 @@ struct Pointer(T)
   def []=(index : Int32, value : T) : T
     (self + index.to_i64!).value = value
   end
+
+  def <(other : Pointer)
+    address < other.address
+  end
 end

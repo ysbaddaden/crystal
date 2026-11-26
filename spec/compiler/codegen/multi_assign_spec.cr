@@ -23,16 +23,19 @@ describe "Code gen: multi assign" do
     end
 
     it "doesn't raise if value size in 1 to n assignment doesn't match target count" do
-      run(<<-CRYSTAL).to_i.should eq(4)
-        require "prelude"
+      link_and_run(<<-CRYSTAL).status.exit_code.should eq(4)
+        require "compiler_spec_prelude/raise"
+        require "compiler_spec_prelude/array"
 
-        begin
+        result = begin
           a, b = [1, 2, 3]
           4
         rescue ex : Exception
-          raise ex unless ex.message == "Multiple assignment count mismatch"
+          raise ex unless (ex.message || "") == "Multiple assignment count mismatch"
           5
         end
+
+        LibC.exit(result)
         CRYSTAL
     end
   end
@@ -62,16 +65,19 @@ describe "Code gen: multi assign" do
     end
 
     it "raises if value size in 1 to n assignment doesn't match target count" do
-      run(<<-CRYSTAL, flags: %w(strict_multi_assign)).to_i.should eq(5)
-        require "prelude"
+      link_and_run(<<-CRYSTAL, flags: %w(strict_multi_assign)).status.exit_code.should eq(5)
+        require "compiler_spec_prelude/raise"
+        require "compiler_spec_prelude/array"
 
-        begin
+        result = begin
           a, b = [1, 2, 3]
           4
         rescue ex : Exception
-          raise ex unless ex.message == "Multiple assignment count mismatch"
+          raise ex unless (ex.message || "") == "Multiple assignment count mismatch"
           5
         end
+
+        LibC.exit(result)
         CRYSTAL
     end
   end

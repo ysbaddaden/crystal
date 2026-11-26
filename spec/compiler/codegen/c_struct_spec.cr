@@ -359,8 +359,8 @@ describe "Code gen: struct" do
   end
 
   it "sets instance var to proc" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       lib LibFoo
         struct Foo
@@ -376,7 +376,9 @@ describe "Code gen: struct" do
 
       foo = LibFoo::Foo.new
       foo.set(->(x : Int32) { x + 1 })
-      foo.x.call(1)
+      y = foo.x.call(1)
+
+      LibC.exit(y)
       CRYSTAL
   end
 

@@ -44,17 +44,22 @@ describe "Code gen: cast" do
   end
 
   it "casts from union to single type raises TypeCastError" do
-    run(<<-CRYSTAL).to_b.should be_true
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude/class"
 
       a = 1 || 'a'
       begin
         a.as(Char)
-        false
+        LibC.puts "false"
       rescue ex
-        ex.message.not_nil!.includes?("Cast from Int32 to Char failed") && (ex.class == TypeCastError)
+        LibC.puts ex.class.name
+        LibC.puts ex.message || "(nil)"
       end
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should contain("TypeCastError\n")
+    result.output.should contain("Cast from Int32 to Char failed")
   end
 
   it "casts from union to another union" do
@@ -70,43 +75,54 @@ describe "Code gen: cast" do
   end
 
   it "casts from union to another union raises TypeCastError" do
-    run(<<-CRYSTAL).to_b.should be_true
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude/class"
 
       a = 1 || 1.5 || 'a'
       begin
         a.as(Float64 | Char)
-        false
+        LibC.puts "false"
       rescue ex
-        ex.message.not_nil!.includes?("Cast from Int32 to (Char | Float64) failed") && (ex.class == TypeCastError)
+        LibC.puts ex.class.name
+        LibC.puts ex.message || "(nil)"
       end
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should contain("TypeCastError\n")
+    result.output.should contain("Cast from Int32 to (Char | Float64) failed")
   end
 
   it "upcasts from union to union with different alignment" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(4)
+      require "compiler_spec_prelude/raise"
 
-      a = 1 || 2_i64
-      a.as(Int32 | Int64 | Int128)
+      a = 4 || 2_i64
+      x = a.as(Int32 | Int64 | Int128)
+
+      LibC.exit(x.to_i32)
       CRYSTAL
   end
 
   it "downcasts from union to union with different alignment" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(4)
+      require "compiler_spec_prelude/raise"
 
-      a = 1 || 2_i64 || 3_i128
-      a.as(Int32 | Int64)
+      a = 4 || 2_i64 || 3_i128
+      x = a.as(Int32 | Int64)
+
+      LibC.exit(x.to_i32)
       CRYSTAL
   end
 
   it "sidecasts from union to union with different alignment" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(4)
+      require "compiler_spec_prelude/raise"
 
-      a = 1 || 2_i64
-      a.as(Int32 | Int128)
+      a = 4 || 2_i64
+      x = a.as(Int32 | Int128)
+
+      LibC.exit(x.to_i32)
       CRYSTAL
   end
 
@@ -168,8 +184,9 @@ describe "Code gen: cast" do
   end
 
   it "casts from virtual to single type raises TypeCastError" do
-    run(<<-CRYSTAL).to_b.should be_true
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude/class"
 
       class CastSpecFoo
       end
@@ -186,11 +203,15 @@ describe "Code gen: cast" do
       a = CastSpecBar.new || CastSpecFoo.new || CastSpecBaz.new
       begin
         a.as(CastSpecBaz)
-        false
+        LibC.puts "false"
       rescue ex
-        ex.message.not_nil!.includes?("Cast from CastSpecBar to CastSpecBaz failed") && (ex.class == TypeCastError)
+        LibC.puts ex.class.name
+        LibC.puts ex.message || "(nil)"
       end
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should contain("TypeCastError\n")
+    result.output.should contain("Cast from CastSpecBar to CastSpecBaz failed")
   end
 
   it "casts from pointer to pointer" do
@@ -245,17 +266,22 @@ describe "Code gen: cast" do
   end
 
   it "casts from nilable to nil raises TypeCastError" do
-    run(<<-CRYSTAL).to_b.should be_true
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude/class"
 
       a = 1 == 1 ? Reference.new : nil
       begin
         a.as(Nil)
-        false
+        LibC.puts "false"
       rescue ex
-        ex.message.not_nil!.includes?("Cast from Reference to Nil failed") && (ex.class == TypeCastError)
+        LibC.puts ex.class.name
+        LibC.puts ex.message || "(nil)"
       end
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should contain("TypeCastError\n")
+    result.output.should contain("Cast from Reference to Nil failed")
   end
 
   it "casts to base class making it virtual" do
@@ -401,7 +427,7 @@ describe "Code gen: cast" do
 
   it "casts with block var that changes type (#3341)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "compiler_spec_prelude/raise"
 
       class Object
         def try
@@ -419,7 +445,7 @@ describe "Code gen: cast" do
 
   it "casts between union types, where union has a tuple type (#3377)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "compiler_spec_prelude/raise"
 
       v = 1 || true || 1.0
       (v || {v}).as(Bool | Float64)

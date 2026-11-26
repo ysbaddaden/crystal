@@ -2,8 +2,8 @@ require "../../spec_helper"
 
 describe "Code gen: exception" do
   it "codegens rescue specific leaf exception" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       class Foo < Exception
       end
@@ -13,15 +13,17 @@ describe "Code gen: exception" do
       end
 
       def bar(x)
-        1
+        2
       end
 
-      begin
+      result = begin
         foo
-        2
+        3
       rescue ex : Foo
         bar(ex)
       end
+
+      LibC.exit(result)
       CRYSTAL
   end
 
@@ -42,8 +44,8 @@ describe "Code gen: exception" do
   end
 
   it "does ensure after rescue which returns (#171)" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       class Global
         @@x = 0
@@ -67,7 +69,7 @@ describe "Code gen: exception" do
 
       foo
 
-      Global.x
+      LibC.exit(Global.x)
       CRYSTAL
   end
 
@@ -86,9 +88,8 @@ describe "Code gen: exception" do
   end
 
   it "executes rescue if something is raised conditionally" do
-    run(<<-CRYSTAL).to_i.should eq(8)
-      require "prelude"
-
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(8)
+      require "compiler_spec_prelude/raise"
       y = 1
       x = 1
 
@@ -98,13 +99,13 @@ describe "Code gen: exception" do
           rescue
             y = 4
           end
-      x + y
+      LibC.exit(x + y)
       CRYSTAL
   end
 
   it "executes rescue if something is raised unconditionally" do
-    run(<<-CRYSTAL).to_i.should eq(6)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
+      require "compiler_spec_prelude/raise"
 
       y = 1
       x = 1
@@ -114,7 +115,7 @@ describe "Code gen: exception" do
           rescue
             y = 3
           end
-      x + y
+      LibC.exit(x + y)
       CRYSTAL
   end
 
@@ -132,22 +133,21 @@ describe "Code gen: exception" do
   end
 
   it "can result into union (2)" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       y = begin
             1 > 0 ? raise("Oh no!") : 0
           rescue
             2.1
           end
-      y.to_i
+      LibC.exit(y.to_i)
       CRYSTAL
   end
 
   it "handles nested exceptions" do
-    run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
-
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
+      require "compiler_spec_prelude/raise"
       a = 0
       b = begin
             begin
@@ -160,7 +160,7 @@ describe "Code gen: exception" do
             2
           end
 
-      a + b
+      LibC.exit(a + b)
       CRYSTAL
   end
 
@@ -197,8 +197,8 @@ describe "Code gen: exception" do
   end
 
   it "executes ensure when exception is raised (1)" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       a = 0
       b = begin
@@ -209,14 +209,13 @@ describe "Code gen: exception" do
           ensure
             a = 2
           end
-      a
+      LibC.exit(a)
       CRYSTAL
   end
 
   it "executes ensure when exception is raised (2)" do
-    run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
-
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
+      require "compiler_spec_prelude/raise"
       a = 0
       b = begin
             a = 1
@@ -226,13 +225,13 @@ describe "Code gen: exception" do
           ensure
             a = 2
           end
-      b
+      LibC.exit(b)
       CRYSTAL
   end
 
   it "executes ensure when exception is unhandled (1)" do
-    run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception; end
 
@@ -249,13 +248,13 @@ describe "Code gen: exception" do
           rescue
             4
           end
-      a
+      LibC.exit(a)
       CRYSTAL
   end
 
   it "executes ensure when exception is unhandled (2)" do
-    run(<<-CRYSTAL).to_i.should eq(4)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(4)
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception; end
 
@@ -272,13 +271,13 @@ describe "Code gen: exception" do
           rescue
             4
           end
-      b
+      LibC.exit(b)
       CRYSTAL
   end
 
   it "ensure without rescue" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/raise"
 
       a = 0
       begin
@@ -290,7 +289,7 @@ describe "Code gen: exception" do
       rescue
       end
 
-      a
+      LibC.exit(a)
       CRYSTAL
   end
 
@@ -356,8 +355,8 @@ describe "Code gen: exception" do
   end
 
   it "rescues with type" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -370,13 +369,13 @@ describe "Code gen: exception" do
             2
           end
 
-      a
+      LibC.exit(a)
       CRYSTAL
   end
 
   it "rescues with types defaults to generic rescue" do
-    run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -391,13 +390,13 @@ describe "Code gen: exception" do
             3
           end
 
-      a
+      LibC.exit(a)
       CRYSTAL
   end
 
   it "handles exception in outer block (1)" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -414,13 +413,13 @@ describe "Code gen: exception" do
             2
           end
 
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
   it "handles exception in outer block (2)" do
-    run(<<-CRYSTAL).to_i.should eq(0)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -437,13 +436,13 @@ describe "Code gen: exception" do
             2
           end
 
-      p
+      LibC.exit(p)
       CRYSTAL
   end
 
   it "handles subclass" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -455,13 +454,13 @@ describe "Code gen: exception" do
       rescue Ex1
         x = 1
       end
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
   it "handle multiple exception types (1)" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -472,13 +471,13 @@ describe "Code gen: exception" do
       rescue Ex1 | Ex2
         x = 1
       end
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
   it "handle multiple exception types (2)" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -489,29 +488,29 @@ describe "Code gen: exception" do
       rescue Ex1 | Ex2
         x = 1
       end
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
   it "receives exception object" do
-    run(<<-CRYSTAL).to_string.should eq("Ex1")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/class"
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception
-        def to_s(io)
-          io << "Ex1"
-        end
       end
 
       x = ""
       begin
         raise Ex1.new
       rescue ex
-        x = ex.to_s
+        x = ex.class.name
       end
 
-      x
+      LibC.puts(x)
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should eq("Ex1\n")
   end
 
   it "executes else if no exception is raised (1)" do
@@ -545,8 +544,8 @@ describe "Code gen: exception" do
   end
 
   it "doesn't execute else if exception is raised (1)" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception; end
 
@@ -558,13 +557,13 @@ describe "Code gen: exception" do
           else
             x = 3
           end
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
   it "doesn't execute else if exception is raised (2)" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception; end
 
@@ -576,13 +575,13 @@ describe "Code gen: exception" do
           else
             x = 3
           end
-      y
+      LibC.exit(y)
       CRYSTAL
   end
 
   it "doesn't execute else if exception is raised conditionally (1)" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception; end
 
@@ -594,13 +593,13 @@ describe "Code gen: exception" do
           else
             x = 3
           end
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
   it "doesn't execute else if exception is raised conditionally (2)" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       class Ex1 < Exception; end
 
@@ -612,13 +611,13 @@ describe "Code gen: exception" do
           else
             x = 3
           end
-      y
+      LibC.exit(y)
       CRYSTAL
   end
 
   it "handle exception raised by proc literal" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/raise"
 
       x = 0
       f = -> { raise "Foo" if 1 == 1 }
@@ -627,40 +626,40 @@ describe "Code gen: exception" do
       rescue
         x = 1
       end
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
   it "codegens issue #118 (1)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "compiler_spec_prelude/raise"
 
       begin
         raise "hey"
         n = 3
       ensure
-        p n
+        n
       end
       CRYSTAL
   end
 
   it "codegens issue #118 (2)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "compiler_spec_prelude/raise"
 
       n = nil
       begin
         raise "hey"
         n = 3
       ensure
-        p n
+        n
       end
       CRYSTAL
   end
 
   it "captures exception thrown from proc" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       def foo
         ->{ raise "OH NO" }.call
@@ -672,29 +671,33 @@ describe "Code gen: exception" do
       rescue
         a = 2
       end
-      a
+      LibC.exit(a)
       CRYSTAL
   end
 
   it "uses exception after rescue" do
-    run(<<-CRYSTAL).to_string.should eq("OH NO")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/raise"
 
       begin
         raise "OH NO"
       rescue ex
       end
-      ex.not_nil!.message
+      if ex && (message = ex.message)
+        LibC.printf("%s", message)
+      end
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should eq("OH NO")
   end
 
   it "doesn't codegen duplicated ensure if unreachable (#709)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "compiler_spec_prelude/raise"
 
       class Foo
         def initialize
-          exit if 1 == 2
+          LibC.exit(1) if 1 == 2
         end
       end
 
@@ -711,8 +714,8 @@ describe "Code gen: exception" do
   end
 
   it "executes ensure when raising inside rescue" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       a = 1
 
@@ -727,7 +730,7 @@ describe "Code gen: exception" do
       rescue
       end
 
-      a
+      LibC.exit(a)
       CRYSTAL
   end
 
@@ -812,8 +815,8 @@ describe "Code gen: exception" do
   end
 
   it "executes ensure of break inside while inside rescue" do
-    run(<<-CRYSTAL).to_i.should eq(123)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(123)
+      require "compiler_spec_prelude/raise"
 
       a = 0
       while true
@@ -825,7 +828,7 @@ describe "Code gen: exception" do
           a = 123
         end
       end
-      a
+      LibC.exit(a)
       CRYSTAL
   end
 
@@ -866,8 +869,9 @@ describe "Code gen: exception" do
   end
 
   it "executes return inside rescue, executing ensure" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude/once"
 
       class Global
         @@x = 0
@@ -895,7 +899,7 @@ describe "Code gen: exception" do
 
       foo
 
-      Global.x
+      LibC.exit(Global.x)
       CRYSTAL
   end
 
@@ -1093,8 +1097,8 @@ describe "Code gen: exception" do
   end
 
   it "propagates raise status (#2074)" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
+      require "compiler_spec_prelude/raise"
 
       class Foo
         @var : Var?
@@ -1126,36 +1130,38 @@ describe "Code gen: exception" do
       # This causes method2 to recompute, but method1 doesn't get notified
       # that it might now raise
       foo.var = Var.new
-      a = 1
+      a = 2
       begin
         foo.method1
       rescue ex
-        a = 2
+        a = 3
       end
-      a
+      LibC.exit(a)
       CRYSTAL
   end
 
   it "doesn't crash on #1988" do
-    run(<<-CRYSTAL).to_i.should eq(42)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(42)
+      require "compiler_spec_prelude/raise"
 
       begin
         x = 42
       rescue
       end
 
-      if x.is_a?(Int32)
-        x
-      else
-        21
-      end
+      rs = if x.is_a?(Int32)
+             x
+           else
+             21
+           end
+      LibC.exit(rs)
       CRYSTAL
   end
 
   it "runs #2441" do
-    run(<<-CRYSTAL).to_string.should eq("foo")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude/string"
 
       while true
         begin
@@ -1165,28 +1171,33 @@ describe "Code gen: exception" do
         end
       end
 
-      ex.not_nil!.message.to_s
+      if ex
+        LibC.puts(ex.message || "")
+      end
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should eq("foo\n")
   end
 
   it "can rescue TypeCastError (#2607)" do
-    run(<<-CRYSTAL).to_i.should eq(42)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(42)
+      require "compiler_spec_prelude/raise"
 
-      begin
-        (1 || "foo").as(String)
-        2
-      rescue e : TypeCastError
-        42
-      rescue e : Exception
-        0
-      end
+      rs = begin
+             (1 || "foo").as(String)
+             41
+           rescue e : TypeCastError
+             42
+           rescue e : Exception
+             43
+           end
+      LibC.exit(rs)
       CRYSTAL
   end
 
   it "can use argument in rescue (#2844)" do
-    run(<<-CRYSTAL).to_string.should eq("foo")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/raise"
 
       def foo(exe)
         begin
@@ -1198,13 +1209,15 @@ describe "Code gen: exception" do
 
       ex = Exception.new("foo")
       ex = foo(ex)
-      ex.message.not_nil!
+      LibC.puts(ex.message || "")
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should eq("foo\n")
   end
 
   it "can use argument in rescue, with a different type (1) (#2844)" do
-    run(<<-CRYSTAL).to_string.should eq("foo")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/raise"
 
       def foo(exe)
         begin
@@ -1216,13 +1229,15 @@ describe "Code gen: exception" do
       end
 
       ex = foo(1).as(Exception)
-      ex.message.not_nil!
+      LibC.puts(ex.message || "")
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should eq("foo\n")
   end
 
   it "can use argument in rescue, with a different type (2) (#2844)" do
-    run(<<-CRYSTAL).to_i.should eq(10)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
+      require "compiler_spec_prelude/raise"
 
       def foo(exe)
         begin
@@ -1233,62 +1248,70 @@ describe "Code gen: exception" do
         end
       end
 
-      foo(10).as(Int32)
+      LibC.exit foo(10).as(Int32)
       CRYSTAL
   end
 
   it "runs NoReturn ensure (#3082)" do
-    run(<<-CRYSTAL).to_i.should eq(123)
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/raise"
 
       begin
-        print 1
+        LibC.printf "1"
         raise "OH NO"
-        print 0
+        LibC.printf "0"
       rescue
-        print 2
+        LibC.printf "2"
       ensure
-        print 3
-        exit
-        print 4
+        LibC.printf "3"
+        LibC.exit(6)
+        LibC.printf "4"
       end
-      print 5
+      LibC.printf "5"
       CRYSTAL
+    result.status.exit_code.should eq(6)
+    result.output.should eq("123")
   end
 
   it "catches exception thrown by as inside method (#4030)" do
-    run(<<-CRYSTAL).to_string.should eq("good")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/raise"
 
       def foo
         a = 1 || ""
         a.as(String)
       end
 
-      begin
-        foo
-        "bad"
-      rescue ex : TypeCastError
-        "good"
-      end
+      x = begin
+            foo
+            "bad"
+          rescue ex : TypeCastError
+            "good"
+          end
+      LibC.puts(x)
       CRYSTAL
+    result.status.exit_code.should eq(0)
+    result.output.should eq("good\n")
   end
 
   it "types parenthesized expression (#5511)" do
-    run(<<-CRYSTAL).to_string.should eq("foo")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/raise"
 
-      begin
-        ((raise "foo").bar).baz
-      rescue ex
-        ex.message
-      end
+      x = begin
+            ((raise "foo").bar).baz
+          rescue ex
+            ex.message
+          end
+      LibC.puts(x || "")
       CRYSTAL
+    result.status.exit_code.should eq(0)
+    result.output.should eq("foo\n")
   end
 
   it "codegens return from rescue with value" do
-    run(<<-CRYSTAL).to_i.should eq(5)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(5)
+      require "compiler_spec_prelude/raise"
 
       def foo
         begin
@@ -1298,7 +1321,7 @@ describe "Code gen: exception" do
         end
       end
 
-      foo
+      LibC.exit(foo)
       CRYSTAL
   end
 
@@ -1322,8 +1345,8 @@ describe "Code gen: exception" do
   end
 
   it "handles rescuing module type" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/raise"
 
       module Foo; end
 
@@ -1337,13 +1360,13 @@ describe "Code gen: exception" do
       rescue Foo
         x = 1
       end
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
   it "handles rescuing union between module type and class type" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/raise"
 
       module Foo; end
 
@@ -1360,13 +1383,13 @@ describe "Code gen: exception" do
       rescue Foo | BaseError
         x = 1
       end
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
   it "handles rescuing union between module types" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/raise"
 
       module Foo; end
       module Bar; end
@@ -1385,13 +1408,13 @@ describe "Code gen: exception" do
       rescue Foo | Bar
         x = 1
       end
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
   it "does not rescue just any module" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       module Foo; end
       module Bar; end
@@ -1410,13 +1433,13 @@ describe "Code gen: exception" do
       rescue ex
         x = 2
       end
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
   it "rescues a valid union" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/raise"
 
       module Foo; end
       module Bar; end
@@ -1431,13 +1454,13 @@ describe "Code gen: exception" do
       rescue Union(Foo, Bar)
         x = 1
       end
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
   it "rescues a valid nested union" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/raise"
 
       module Foo; end
       module Bar; end
@@ -1453,13 +1476,13 @@ describe "Code gen: exception" do
       rescue Union(Baz, Union(Foo, Bar))
         x = 1
       end
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 
   it "does not rescue just any union" do
-    run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       module Foo; end
       module Bar; end
@@ -1477,7 +1500,7 @@ describe "Code gen: exception" do
       rescue
         x = 2
       end
-      x
+      LibC.exit(x)
       CRYSTAL
   end
 end

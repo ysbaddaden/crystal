@@ -157,8 +157,10 @@ describe "Codegen: const" do
   end
 
   it "initialize const that might raise an exception" do
-    run(<<-CRYSTAL).to_b.should be_true
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
+      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude/once"
+
       CONST = (raise "OH NO" if 1 == 2)
 
       def doit
@@ -166,7 +168,7 @@ describe "Codegen: const" do
       rescue
       end
 
-      doit.nil?
+      LibC.exit(doit.nil? ? 0 : 1)
       CRYSTAL
   end
 

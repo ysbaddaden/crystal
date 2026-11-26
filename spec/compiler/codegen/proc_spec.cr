@@ -51,8 +51,9 @@ describe "Code gen: proc" do
   end
 
   it "call proc pointer of instance method that raises" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      require "compiler_spec_prelude/raise"
+
       class Foo
         def coco
           raise "foo"
@@ -61,7 +62,9 @@ describe "Code gen: proc" do
 
       foo = Foo.new
       f = ->foo.coco
-      f.call rescue 1
+      result = f.call rescue 1
+
+      LibC.exit(result)
       CRYSTAL
   end
 
@@ -1043,20 +1046,29 @@ describe "Code gen: proc" do
   end
 
   it "raises if returning closure from top-level fun (#14691)" do
-    run(<<-CRYSTAL).to_b.should be_true
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(41)
+      require "compiler_spec_prelude/raise"
 
       @[Raises]
       fun foo(x : Int32) : -> Int32
         -> { x }
       end
 
-      begin
-        foo(1)
-      rescue
-        true
+      result = begin
+                 foo(1)
+               rescue
+                 true
+               else
+                 false
+               end
+
+      case result
+      when true
+        LibC.exit(40)
+      when false
+        LibC.exit(41)
       else
-        false
+        LibC.exit(1)
       end
       CRYSTAL
   end

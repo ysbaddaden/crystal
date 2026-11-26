@@ -35,17 +35,17 @@ describe "Code gen: alias" do
   end
 
   it "casts to recursive alias" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
+      require "compiler_spec_prelude/raise"
 
       class Bar(T)
       end
 
       alias Foo = Int32 | Bar(Foo)
 
-      a = 1.as(Foo)
+      a = 2.as(Foo)
       b = a.as(Int32)
-      b
+      LibC.exit(b)
       CRYSTAL
   end
 

@@ -1,4 +1,6 @@
-require "./exceptions"
+{% unless @top_level.has_method?(:raise) %}
+  require "./exceptions"
+{% end %}
 
 class Object
   def not_nil!

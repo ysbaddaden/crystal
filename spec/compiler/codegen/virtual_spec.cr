@@ -693,8 +693,8 @@ describe "Code gen: virtual type" do
   end
 
   it "codegens new for new on virtual abstract class (#3835)" do
-    run(<<-CRYSTAL).to_string.should eq("Can't instantiate abstract class Foo")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/raise"
 
       abstract class Foo
       end
@@ -705,13 +705,17 @@ describe "Code gen: virtual type" do
         end
       end
 
-      begin
-        (Foo || Bar).new
-        ""
-      rescue ex
-        ex.message.not_nil!
-      end
+      result = begin
+                 (Foo || Bar).new
+                 ""
+               rescue ex
+                 ex.message || ""
+               end
+
+      LibC.puts(result)
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should eq("Can't instantiate abstract class Foo\n")
   end
 
   it "casts metaclass union type to virtual metaclass type (#6298)" do

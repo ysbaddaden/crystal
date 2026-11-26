@@ -97,8 +97,8 @@ describe "Codegen: extern struct" do
   end
 
   it "sets callback on extern struct" do
-    run(<<-CRYSTAL).to_i.should eq(42)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(42)
+      require "compiler_spec_prelude/raise"
 
       @[Extern]
       struct Foo
@@ -115,13 +115,13 @@ describe "Codegen: extern struct" do
 
       foo = Foo.new
       foo.set
-      foo.get
+      LibC.exit(foo.get)
       CRYSTAL
   end
 
   it "sets callback on extern union" do
-    run(<<-CRYSTAL).to_i.should eq(42)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(42)
+      require "compiler_spec_prelude/raise"
 
       @[Extern(union: true)]
       struct Foo
@@ -139,7 +139,7 @@ describe "Codegen: extern struct" do
 
       foo = Foo.new
       foo.set
-      foo.get
+      LibC.exit(foo.get)
       CRYSTAL
   end
 

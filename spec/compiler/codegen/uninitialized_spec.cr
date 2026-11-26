@@ -72,8 +72,8 @@ describe "Code gen: uninitialized" do
   end
 
   it "works inside while/begin/rescue (bug inside #759)" do
-    run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
+      require "compiler_spec_prelude/raise"
 
       a = 3
       while 1
@@ -84,7 +84,8 @@ describe "Code gen: uninitialized" do
         rescue
         end
       end
-      a
+
+      LibC.exit(a)
       CRYSTAL
   end
 

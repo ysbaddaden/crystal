@@ -455,8 +455,8 @@ describe "Code gen: struct" do
   end
 
   it "codegens virtual struct metaclass (#2551) (4)" do
-    run(<<-CRYSTAL).to_i.should eq(42)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(42)
+      require "compiler_spec_prelude/raise"
 
       abstract struct Foo
         def initialize
@@ -478,7 +478,7 @@ describe "Code gen: struct" do
       struct Baz < Foo
       end
 
-      (Bar || Baz).new.x
+      LibC.exit((Bar || Baz).new.x)
       CRYSTAL
   end
 

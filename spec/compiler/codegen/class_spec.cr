@@ -1152,7 +1152,7 @@ describe "Code gen: class" do
 
   it "doesn't crash on abstract class never instantiated (#2840)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "compiler_spec_prelude/raise"
 
       abstract class Foo
       end
