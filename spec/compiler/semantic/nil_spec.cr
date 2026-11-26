@@ -19,7 +19,15 @@ describe "Semantic: nil" do
 
   it "marks instance variables as nil but doesn't explode on macros" do
     assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+      require "primitives"
+      require "object/properties"
+      require "array_literal"
+
+      class Array(T)
+         def last : T
+           to_unsafe.value
+         end
+       end
 
       class Foo
         getter :var

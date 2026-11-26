@@ -567,7 +567,11 @@ describe "Semantic: instance var" do
 
   it "infers type from string interpolation" do
     assert_type(<<-CRYSTAL) { string }
-      require "prelude"
+      class String
+        def self.interpolation(*values) : String
+          ""
+        end
+      end
 
       class Foo
         def initialize
@@ -632,8 +636,8 @@ describe "Semantic: instance var" do
   end
 
   it "infers type from array literal from its literals" do
-    assert_type(<<-CRYSTAL) { array_of union_of(int32, char) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { array_of union_of(int32, char) }
+      require "array_literal"
 
       class Foo
         def initialize
@@ -667,7 +671,7 @@ describe "Semantic: instance var" do
 
   it "infers type from hash literal from elements" do
     assert_type(<<-CRYSTAL) { hash_of(union_of(int32, char), union_of(string, bool)) }
-      require "prelude"
+      require "hash_literal"
 
       class Foo
         def initialize
@@ -685,7 +689,7 @@ describe "Semantic: instance var" do
 
   it "infers type from range literal" do
     assert_type(<<-CRYSTAL) { range_of(int32, char) }
-      require "prelude"
+      require "range_literal"
 
       class Foo
         def initialize
@@ -987,8 +991,8 @@ describe "Semantic: instance var" do
   end
 
   it "infers type from case" do
-    assert_type(<<-CRYSTAL) { union_of(char, bool) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { union_of(char, bool) }
+      require "int32_case_equality"
 
       class Foo
         def initialize
@@ -2717,8 +2721,8 @@ describe "Semantic: instance var" do
   end
 
   it "infers type from array literal with literals in generic type" do
-    assert_type(<<-CRYSTAL) { array_of(int32) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { array_of(int32) }
+      require "array_literal"
 
       class Foo(T)
         def initialize
@@ -2736,7 +2740,7 @@ describe "Semantic: instance var" do
 
   it "infers type from hash literal with literals in generic type" do
     assert_type(<<-CRYSTAL) { hash_of(int32, symbol) }
-      require "prelude"
+      require "hash_literal"
 
       class Foo(T)
         def initialize
@@ -3058,8 +3062,8 @@ describe "Semantic: instance var" do
   end
 
   it "infers from Pointer.malloc with two arguments" do
-    assert_type(<<-CRYSTAL) { pointer_of(uint8) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { pointer_of(uint8) }
+      require "pointer_constructors"
 
       class Foo
         def initialize
@@ -3076,8 +3080,8 @@ describe "Semantic: instance var" do
   end
 
   it "infers from Pointer.null" do
-    assert_type(<<-CRYSTAL) { pointer_of(int32) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { pointer_of(int32) }
+      require "pointer_constructors"
 
       class Foo
         def initialize
@@ -3110,8 +3114,8 @@ describe "Semantic: instance var" do
   end
 
   it "infers from Pointer.null in generic type" do
-    assert_type(<<-CRYSTAL) { pointer_of(int32) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { pointer_of(int32) }
+      require "pointer_constructors"
 
       class Foo(T)
         def initialize
@@ -3128,8 +3132,8 @@ describe "Semantic: instance var" do
   end
 
   it "infers from Pointer.malloc with two arguments in generic type" do
-    assert_type(<<-CRYSTAL) { pointer_of(uint8) }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { pointer_of(uint8) }
+      require "pointer_constructors"
 
       class Foo(T)
         def initialize
@@ -3847,8 +3851,8 @@ describe "Semantic: instance var" do
   end
 
   it "says can't infer (#2536)" do
-    assert_error <<-CRYSTAL, "can't infer the type of instance variable '@foo' of Foo(Int32)"
-      require "prelude"
+    assert_error <<-CRYSTAL, "can't infer the type of instance variable '@foo' of Foo(Int32)", inject_primitives: true
+      require "array_literal"
 
       class Foo(T)
         def initialize(@arg : T)
@@ -5348,8 +5352,8 @@ describe "Semantic: instance var" do
   end
 
   it "guesses virtual array type (1) (#5342)" do
-    assert_type(<<-CRYSTAL) { array_of(array_of(int32).virtual_type).virtual_type }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { array_of(array_of(int32).virtual_type).virtual_type }
+      require "array_literal"
 
       class First(T) < Array(T)
       end
@@ -5368,7 +5372,7 @@ describe "Semantic: instance var" do
 
   it "guesses virtual array type (2) (#5342)" do
     assert_type(<<-CRYSTAL) { array_of(array_of(int32).virtual_type).virtual_type }
-      require "prelude"
+      require "array_access"
 
       class First(T) < Array(T)
       end
@@ -5404,7 +5408,7 @@ describe "Semantic: instance var" do
 
   it "guesses virtual hash type (1) (#5342)" do
     assert_type(<<-CRYSTAL) { hash_of(hash_of(int32, int32).virtual_type, int32).virtual_type }
-      require "prelude"
+      require "hash_literal"
 
       class First(K, V) < Hash(K, V)
       end
@@ -5423,7 +5427,7 @@ describe "Semantic: instance var" do
 
   it "guesses virtual hash type (2) (#5342)" do
     assert_type(<<-CRYSTAL) { hash_of(hash_of(int32, int32).virtual_type, int32).virtual_type }
-      require "prelude"
+      require "hash_literal"
 
       class First(K, V) < Hash(K, V)
       end

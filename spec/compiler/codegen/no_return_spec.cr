@@ -22,7 +22,7 @@ describe "Code gen: no return" do
 
   it "codegen types exception handler as NoReturn if ensure is NoReturn" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "unreachable_unwind"
 
       lib LibC
         fun foo : NoReturn
@@ -82,7 +82,7 @@ describe "Code gen: no return" do
 
   it "codegens untyped typeof (#5105)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "cleanup_raise"
 
       typeof(raise("").foo)
       CRYSTAL

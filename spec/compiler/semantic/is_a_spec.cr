@@ -97,8 +97,10 @@ describe "Semantic: is_a?" do
   end
 
   it "applies negative condition filter if then is no return" do
-    assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
+    assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
+      lib LibC
+        fun exit : NoReturn
+      end
 
       def foo
         if 1 == 1
@@ -111,7 +113,7 @@ describe "Semantic: is_a?" do
       def bar
         elems = foo
         if elems.is_a?(Char)
-          raise "No!"
+          LibC.exit
         end
         elems
       end
@@ -227,7 +229,7 @@ describe "Semantic: is_a?" do
 
   it "doesn't fail on untyped is_a (#10317)" do
     assert_no_errors(<<-CRYSTAL)
-      require "prelude"
+      require "cleanup_raise"
 
       def foo(&block)
       end

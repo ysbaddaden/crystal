@@ -6,7 +6,7 @@ describe "Semantic: NoReturn" do
   end
 
   it "types raise as NoReturn" do
-    assert_type("require \"prelude\"; raise \"foo\"") { no_return }
+    assert_type(%(require "cleanup_raise"; raise "foo")) { no_return }
   end
 
   it "types union of NoReturn and something else" do
@@ -320,9 +320,11 @@ describe "Semantic: NoReturn" do
 
   it "types as NoReturn if typeof(exp)'s exp is NoReturn" do
     assert_type(<<-CRYSTAL) { no_return.metaclass }
-      require "prelude"
+      lib LibC
+        fun exit : NoReturn
+      end
 
-      typeof(raise("").foo)
+      typeof(LibC.exit.foo)
       CRYSTAL
   end
 

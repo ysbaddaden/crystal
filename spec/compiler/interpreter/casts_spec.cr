@@ -1,6 +1,16 @@
 {% skip_file if flag?(:without_interpreter) %}
 require "./spec_helper"
 
+private CAST_FAILURE_HOOK = <<-CRYSTAL
+  @[Primitive(:interpreter_raise_without_backtrace)]
+  def raise(exception : Exception) : NoReturn
+  end
+
+  def __crystal_raise_cast_failed(obj, type_name : String, location : String) : NoReturn
+    raise Exception.new
+  end
+  CRYSTAL
+
 describe Crystal::Repl::Interpreter do
   context "casts" do
     it "casts from reference to pointer and back" do
@@ -58,7 +68,9 @@ describe Crystal::Repl::Interpreter do
     end
 
     it "casts from mixed union type to primitive type" do
-      interpret(<<-CRYSTAL, prelude: "prelude").should eq("2")
+      interpret(<<-CRYSTAL).should eq(2)
+        #{CAST_FAILURE_HOOK}
+
         x = 1 == 1 ? 2 : nil
         x.as(Int32)
       CRYSTAL
@@ -81,7 +93,9 @@ describe Crystal::Repl::Interpreter do
     end
 
     it "upcasts between tuple types" do
-      interpret(<<-CRYSTAL, prelude: "prelude").should eq((1 + 'a'.ord).to_s)
+      interpret(<<-CRYSTAL).should eq(1 + 'a'.ord)
+        #{CAST_FAILURE_HOOK}
+
         a =
           if 1 == 1
             {1, 'a'}
@@ -101,7 +115,9 @@ describe Crystal::Repl::Interpreter do
     end
 
     it "upcasts between named tuple types, same order" do
-      interpret(<<-CRYSTAL, prelude: "prelude").should eq((1 + 'a'.ord).to_s)
+      interpret(<<-CRYSTAL).should eq(1 + 'a'.ord)
+        #{CAST_FAILURE_HOOK}
+
         a =
           if 1 == 1
             {a: 1, b: 'a'}
@@ -114,7 +130,9 @@ describe Crystal::Repl::Interpreter do
     end
 
     it "upcasts between named tuple types, different order" do
-      interpret(<<-CRYSTAL, prelude: "prelude").should eq((1 + 'a'.ord).to_s)
+      interpret(<<-CRYSTAL).should eq(1 + 'a'.ord)
+        #{CAST_FAILURE_HOOK}
+
         a =
           if 1 == 1
             {a: 1, b: 'a'}
@@ -127,7 +145,7 @@ describe Crystal::Repl::Interpreter do
     end
 
     it "upcasts between named tuple types, respects alignment (#14036)" do
-      interpret(<<-CRYSTAL, prelude: "prelude").should eq("123")
+      interpret(<<-CRYSTAL).should eq(123)
         a = {x: 100, y: 20_i64, z: 3}.as({y: Int64, z: Int32, x: Int32})
         a[:x] + a[:y] + a[:z]
       CRYSTAL
@@ -228,7 +246,9 @@ describe Crystal::Repl::Interpreter do
     end
 
     it "discards cast" do
-      interpret(<<-CRYSTAL, prelude: "prelude").should eq("10")
+      interpret(<<-CRYSTAL).should eq(10)
+        #{CAST_FAILURE_HOOK}
+
         x = 1 || 'a'
         x.as(Int32)
         10
@@ -248,7 +268,9 @@ describe Crystal::Repl::Interpreter do
     end
 
     it "casts to filtered type, not type in as(...)" do
-      interpret(<<-CRYSTAL, prelude: "prelude").should eq("1")
+      interpret(<<-CRYSTAL).should eq(1)
+        #{CAST_FAILURE_HOOK}
+
         ({1} || 2).as(Tuple)[0]
       CRYSTAL
     end

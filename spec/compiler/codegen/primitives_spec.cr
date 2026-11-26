@@ -1,5 +1,15 @@
 require "../../spec_helper"
 
+private OVERFLOW_HOOK = <<-CRYSTAL
+  lib LibC
+    fun abort : NoReturn
+  end
+
+  fun __crystal_raise_overflow : NoReturn
+    LibC.abort
+  end
+  CRYSTAL
+
 describe "Code gen: primitives" do
   it "codegens bool" do
     run("true").to_b.should be_true
@@ -15,22 +25,27 @@ describe "Code gen: primitives" do
   end
 
   it "codegens int128" do
-    # LLVM's JIT doesn't seem to support 128
-    # bit integers well regarding GenericValue
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    # Keep 128-bit operations on the linked path because of LLVM GenericValue limitations.
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      #{OVERFLOW_HOOK}
 
-      1_i128.to_i
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      LibC.exit(1_i128.to_i == 1 ? 0 : 1)
       CRYSTAL
   end
 
   it "codegens uint128" do
-    # LLVM's JIT doesn't seem to support 128
-    # bit integers well regarding GenericValue
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      #{OVERFLOW_HOOK}
 
-      1_u128.to_i
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      LibC.exit(1_u128.to_i == 1 ? 0 : 1)
       CRYSTAL
   end
 
@@ -59,7 +74,7 @@ describe "Code gen: primitives" do
     # generation of the compiler
 
     it "codegens 1 + 2" do
-      run(%(require "prelude"; 1 + 2)).to_i.should eq(3)
+      run("#{OVERFLOW_HOOK}\n1 + 2").to_i.should eq(3)
     end
 
     it "codegens 1 &+ 2" do
@@ -67,7 +82,7 @@ describe "Code gen: primitives" do
     end
 
     it "codegens 1 - 2" do
-      run(%(require "prelude"; 1 - 2)).to_i.should eq(-1)
+      run("#{OVERFLOW_HOOK}\n1 - 2").to_i.should eq(-1)
     end
 
     it "codegens 1 &- 2" do
@@ -75,7 +90,7 @@ describe "Code gen: primitives" do
     end
 
     it "codegens 2 * 3" do
-      run(%(require "prelude"; 2 * 3)).to_i.should eq(6)
+      run("#{OVERFLOW_HOOK}\n2 * 3").to_i.should eq(6)
     end
 
     it "codegens 2 &* 3" do
@@ -103,7 +118,7 @@ describe "Code gen: primitives" do
     end
 
     it "codegens 1.to_i16" do
-      run(%(require "prelude"; 1.to_i16)).to_i.should eq(1)
+      run("#{OVERFLOW_HOOK}\n1.to_i16").to_i.should eq(1)
     end
 
     it "codegens 1.to_f!" do

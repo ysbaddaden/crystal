@@ -320,7 +320,7 @@ describe "Code gen: block" do
 
   it "call block from dispatch and use local vars" do
     run(<<-CRYSTAL).to_i.should eq(4)
-      require "prelude"
+      require "checked_overflow"
 
       def bar(y)
         yield y
@@ -361,7 +361,9 @@ describe "Code gen: block" do
 
   it "break block with yielder inside while" do
     run(<<-CRYSTAL).to_i.should eq(6)
-      require "prelude"
+      require "checked_overflow"
+      require "int_times"
+
       a = 0
       10.times do
         a += 1
@@ -435,9 +437,16 @@ describe "Code gen: block" do
   end
 
   it "break from block with value" do
-    run(<<-CRYSTAL).to_i.should eq(20)
-      require "prelude"
-      10.times { break 20 }
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(20)
+      require "primitives"
+      require "int_times"
+
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      result = 10.times { break 20 }
+      LibC.exit(result || 0)
       CRYSTAL
   end
 
@@ -901,7 +910,7 @@ describe "Code gen: block" do
 
   it "codegens dispatch with block and break (1)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "checked_overflow"
 
       class Foo(T)
         def initialize(@x : T)
@@ -924,7 +933,8 @@ describe "Code gen: block" do
 
   it "codegens dispatch with block and break (2)" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "prelude"
+      require "literal_array_storage"
+      require "checked_overflow"
 
       a = [1, 2, 3] || [1.5]
       n = 0
@@ -1602,11 +1612,34 @@ describe "Code gen: block" do
   end
 
   it "codegens proc forwarding from an unused yielded block value (#17125)" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
 
-      private record Foo,
-        proc : String ->
+      # Keep Array#each's typed yield while leaving the array empty at runtime.
+      class Array(T)
+        def initialize
+          @size = 0
+        end
+
+        def each
+          i = 0
+          while i < @size
+            yield Pointer(T).new(0).value
+            i &+= 1
+          end
+        end
+      end
+
+      private struct Foo
+        def initialize(@proc : String ->)
+        end
+
+        def proc
+          @proc
+        end
+      end
 
       def bar(&proc : String ->)
         baz(&proc)
@@ -1619,7 +1652,7 @@ describe "Code gen: block" do
         bar(&foo.proc)
       end
 
-      1
+      LibC.exit(1)
       CRYSTAL
   end
 

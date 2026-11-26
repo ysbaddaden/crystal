@@ -648,8 +648,12 @@ describe "Code gen: virtual type" do
   end
 
   it "codegens new for virtual class with one type" do
-    run(<<-CRYSTAL).to_i.should eq(123)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
+      require "cleanup_raise"
+
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
 
       abstract class Foo
       end
@@ -662,13 +666,17 @@ describe "Code gen: virtual type" do
 
       p = Pointer(Foo.class).malloc(1_u64)
       p.value = Bar
-      p.value.new.foo
+      LibC.exit(p.value.new.foo == 123 ? 0 : 1)
       CRYSTAL
   end
 
   it "codegens new for virtual class with two types" do
-    run(<<-CRYSTAL).to_i.should eq(456)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
+      require "cleanup_raise"
+
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
 
       abstract class Foo
       end
@@ -688,7 +696,7 @@ describe "Code gen: virtual type" do
       p = Pointer(Foo.class).malloc(1_u64)
       p.value = Bar
       p.value = Baz
-      p.value.new.foo
+      LibC.exit(p.value.new.foo == 456 ? 0 : 1)
       CRYSTAL
   end
 

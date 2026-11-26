@@ -14,6 +14,7 @@ end
 
 def interpret_with_context(code)
   repl = Crystal::Repl.new
+  repl.program.crystal_path.entries << COMPILER_SPEC_STUBS_PATH
   repl.prelude = "primitives"
 
   value = repl.run_code(code)
@@ -31,6 +32,7 @@ class Spec::CLI
       code = STDIN.gets_to_end
 
       repl = Crystal::Repl.new
+      repl.program.crystal_path.entries << COMPILER_SPEC_STUBS_PATH
       repl.prelude = prelude
 
       print repl.run_code(code)

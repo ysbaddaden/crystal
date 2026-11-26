@@ -125,8 +125,9 @@ describe "semantic: case" do
   end
 
   it "checks exhaustiveness of enum (all cases covered)" do
-    assert_no_errors <<-CRYSTAL
-      require "prelude"
+    assert_no_errors <<-CRYSTAL, inject_primitives: true
+      #{enum_eq}
+      require "cleanup_raise"
 
       enum Color
         Red
@@ -144,8 +145,9 @@ describe "semantic: case" do
   end
 
   it "checks exhaustiveness of enum through method (all cases covered)" do
-    assert_no_errors <<-CRYSTAL
-      require "prelude"
+    assert_no_errors <<-CRYSTAL, inject_primitives: true
+      #{enum_eq}
+      require "cleanup_raise"
 
       enum Color
         Red
@@ -283,7 +285,8 @@ describe "semantic: case" do
 
   it "can prove case is exhaustive for @[Flags] enum when matching type" do
     assert_no_errors <<-CRYSTAL
-      require "prelude"
+      #{enum_eq}
+      require "cleanup_raise"
 
       @[Flags]
       enum Color

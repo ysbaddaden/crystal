@@ -130,7 +130,19 @@ describe "Code gen: module" do
 
   it "codegens pointer of module with block" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+      require "cleanup_raise"
+
+      class Object
+        def not_nil!
+          self
+        end
+      end
+
+      struct Nil
+        def not_nil!
+          raise "unexpected nil"
+        end
+      end
 
       module Moo
       end
@@ -229,7 +241,7 @@ describe "Code gen: module" do
 
   it "codegens proc of a module that was never included" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "cleanup_raise"
 
       module Moo
       end
@@ -532,8 +544,12 @@ describe "Code gen: module" do
   end
 
   it "casts to union of module that is included in other module (#3323)" do
-    run(<<-CRYSTAL).to_i.should eq(10)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
+      require "cast_failure"
+
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
 
       module Moo
         def moo
@@ -560,13 +576,17 @@ describe "Code gen: module" do
       end
 
       bar = Bar.new.as(Int32 | Moo)
-      bar.as(Moo).moo
+      LibC.exit(bar.as(Moo).moo)
       CRYSTAL
   end
 
   it "casts to union of generic module that is included in other module (#3323)" do
-    run(<<-CRYSTAL).to_i.should eq(10)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
+      require "cast_failure"
+
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
 
       module Moo(T)
         def moo
@@ -593,7 +613,7 @@ describe "Code gen: module" do
       end
 
       bar = Bar.new.as(Int32 | Moo(Char))
-      bar.as(Moo(Char)).moo
+      LibC.exit(bar.as(Moo(Char)).moo)
       CRYSTAL
   end
 
