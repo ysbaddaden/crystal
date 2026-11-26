@@ -172,8 +172,6 @@ describe "Codegen: is_a?" do
 
   it "codegens when is_a? is always false but properties are used" do
     run(<<-CRYSTAL).to_b.should be_false
-      require "prelude"
-
       class Foo
         def obj; 1 end
       end

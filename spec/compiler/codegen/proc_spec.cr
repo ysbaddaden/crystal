@@ -108,8 +108,6 @@ describe "Code gen: proc" do
 
   it "makes sure that proc pointer is transformed after type inference" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
       class Bar
         def initialize(@x : Int32)
         end
@@ -206,8 +204,6 @@ describe "Code gen: proc" do
 
   it "codegens proc literal hard type inference (1)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
       class Foo
         def initialize(@x : NoReturn)
         end
@@ -1142,8 +1138,6 @@ describe "Code gen: proc" do
 
   it "saves receiver value of proc pointer `->@@cvar.foo`" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
       class Foo
         def initialize(@foo : Int32)
         end

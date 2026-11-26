@@ -172,8 +172,6 @@ describe "Code gen: struct" do
 
   it "declares const struct" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
       struct Foo
         def initialize(@x : Int32)
         end
@@ -191,8 +189,6 @@ describe "Code gen: struct" do
 
   it "uses struct in if" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
       struct Foo
         def initialize(@x : Int32)
         end

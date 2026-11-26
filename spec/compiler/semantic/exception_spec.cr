@@ -181,8 +181,6 @@ describe "Semantic: exception" do
 
   it "types code with abstract exception that delegates method" do
     assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
-
       class Object
         def foo
           bar(1)
@@ -422,8 +420,6 @@ describe "Semantic: exception" do
 
   it "doesn't consider vars as nilable inside else (#610)" do
     assert_type(<<-CRYSTAL) { int32 }
-      require "prelude"
-
       x = 1
       begin
         a = 1
@@ -523,8 +519,6 @@ describe "Semantic: exception" do
 
   it "marks instance variable as nilable if assigned inside rescue inside initialize" do
     assert_error <<-CRYSTAL, "instance variable '@x' of Foo must be Int32, not Nil"
-      require "prelude"
-
       class Coco < Exception
         def initialize(@x : Foo)
         end

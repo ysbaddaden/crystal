@@ -103,8 +103,6 @@ describe "Codegen: special vars" do
 
   it "codegens in block" do
     run(<<-CRYSTAL).to_string.should eq("hey")
-      require "prelude"
-
       class Object; def not_nil!; self; end; end
 
       def foo
@@ -122,8 +120,6 @@ describe "Codegen: special vars" do
 
   it "codegens in block with nested block" do
     run(<<-CRYSTAL).to_string.should eq("hey")
-      require "prelude"
-
       class Object; def not_nil!; self; end; end
 
       def bar
@@ -147,8 +143,6 @@ describe "Codegen: special vars" do
 
   it "codegens after block" do
     run(<<-CRYSTAL).to_string.should eq("hey")
-      require "prelude"
-
       class Object; def not_nil!; self; end; end
 
       def foo

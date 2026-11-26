@@ -79,8 +79,6 @@ describe "Code gen: union type" do
 
   it "assigns union to union" do
     run(<<-CRYSTAL).to_i.should eq(97)
-      require "prelude"
-
       struct Nil; def to_i; 0; end; end
 
       struct Char
@@ -173,7 +171,6 @@ describe "Code gen: union type" do
 
   it "dispatch call to object method on nilable" do
     run(<<-CRYSTAL)
-      require "prelude"
       class Foo
       end
 
