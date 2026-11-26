@@ -111,7 +111,7 @@ describe "Code gen: primitives" do
     end
 
     it "codegens 1.to_f" do
-      run(%(require "prelude"; 1.to_f)).to_f64.should eq(1.0)
+      run(%(1.to_f)).to_f64.should eq(1.0)
     end
 
     it "skips bounds checking when to_i produces same type" do

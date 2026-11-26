@@ -666,8 +666,6 @@ describe "Code gen: closure" do
 
   it "captures block and accesses local variable (#2050)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
       def capture(&block)
         block
       end

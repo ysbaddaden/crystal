@@ -35,7 +35,6 @@ describe "Semantic: yield with scope" do
 
   it "it uses self for instance method" do
     run(<<-CRYSTAL).to_i.should eq(10)
-      require "prelude"
       def foo; with 1 yield; end
 
       class Foo

@@ -5387,8 +5387,6 @@ describe "Semantic: instance var" do
 
   it "guesses virtual array type (3) (#5342)" do
     assert_type(<<-CRYSTAL) { array_of(array_of(int32).virtual_type).virtual_type }
-      require "prelude"
-
       class First(T) < Array(T)
       end
 
@@ -5444,8 +5442,6 @@ describe "Semantic: instance var" do
 
   it "guesses virtual array type (3) (#5342)" do
     assert_type(<<-CRYSTAL) { hash_of(hash_of(int32, int32).virtual_type, int32).virtual_type }
-      require "prelude"
-
       class First(K, V) < Hash(K, V)
       end
 

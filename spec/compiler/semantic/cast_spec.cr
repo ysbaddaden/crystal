@@ -263,9 +263,7 @@ describe "Semantic: cast" do
 
   it "errors if casting nil to Object inside typeof (#2403)" do
     assert_error <<-CRYSTAL, "can't cast to Object yet"
-      require "prelude"
-
-      puts(typeof(nil.as(Object)))
+      typeof(nil.as(Object))
       CRYSTAL
   end
 

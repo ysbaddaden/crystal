@@ -189,8 +189,6 @@ describe "Code gen: cast" do
 
   it "casts from pointer to pointer" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
       a = 1_i64
       pointerof(a).as(Int32*).value
       CRYSTAL

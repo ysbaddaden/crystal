@@ -132,8 +132,6 @@ describe "Code gen: nilable cast" do
 
   it "casts with block var that changes type (#3341)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
-
       class Object
         def try
           yield self

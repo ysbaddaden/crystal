@@ -44,8 +44,6 @@ describe "Codegen: thread local" do
 
   it "compiles with class variable referenced from initializer" do
     run(<<-CRYSTAL)
-    require "prelude"
-
     class Foo
       @[ThreadLocal]
       @@x : Foo?

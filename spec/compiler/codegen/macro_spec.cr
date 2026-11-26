@@ -725,8 +725,6 @@ describe "Code gen: macro" do
 
   it "transforms hooks (bug)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
-
       module GC
         def self.add_finalizer(object : T)
           object.responds_to?(:finalize)

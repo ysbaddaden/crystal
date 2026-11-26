@@ -87,8 +87,6 @@ describe "Codegen: const" do
 
   it "declare constants in right order" do
     run(<<-CRYSTAL).to_i.should eq(2)
-      require "prelude"
-
       CONST1 = 1 + 1
       CONST2 = true ? CONST1 : 0
       CONST2
@@ -97,8 +95,6 @@ describe "Codegen: const" do
 
   it "uses correct types lookup" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
       module Moo
         class B
           def foo
@@ -119,8 +115,6 @@ describe "Codegen: const" do
 
   it "codegens variable assignment in const" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
       class Foo
         def initialize(@x : Int32)
         end
@@ -145,8 +139,6 @@ describe "Codegen: const" do
 
   it "declaring var" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
       BAR = begin
         a = 1
         while 1 == 2
@@ -218,8 +210,6 @@ describe "Codegen: const" do
 
   it "works with variable declared inside if" do
     run(<<-CRYSTAL).to_i.should eq(4)
-      require "prelude"
-
       FOO = begin
         if 1 == 2
           x = 3
@@ -234,8 +224,6 @@ describe "Codegen: const" do
 
   it "codegens constant that refers to another constant that is a struct" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
-
       struct Foo
         X = Foo.new(1)
         Y = X

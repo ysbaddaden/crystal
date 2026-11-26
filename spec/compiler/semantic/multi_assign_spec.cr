@@ -4,8 +4,6 @@ describe "Semantic: multi assign" do
   context "without strict_multi_assign" do
     it "doesn't error if assigning tuple to fewer targets" do
       assert_type(<<-CRYSTAL) { tuple_of [int32, int32] }
-        require "prelude"
-
         x = {1, 2, ""}
         a, b = x
         {a, b}
