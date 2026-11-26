@@ -142,22 +142,9 @@ describe "Code gen: hash literal spec" do
 
   it "doesn't crash on hash literal with proc pointer (#646)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "hash_single_entry"
+      require "compiler_spec_prelude/hash"
 
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-        fun strcmp(left : UInt8*, right : UInt8*) : Int32
-      end
-
-      class String
-        def ==(other : String)
-          LibC.strcmp(to_unsafe, other.to_unsafe) == 0
-        end
-
-        def to_unsafe
-          pointerof(@c)
-        end
-      end
+      require "compiler_spec_prelude/string"
 
       def blah
         1
@@ -227,10 +214,10 @@ describe "Code gen: hash literal spec" do
   end
 
   it "assignment in hash literal works" do
-    run(%(require "hash_single_entry"; {k = 1 => v = 2}; k &+ v)).to_i.should eq(3)
+    run(%(require "compiler_spec_prelude/hash"; {k = 1 => v = 2}; k &+ v)).to_i.should eq(3)
   end
 
   it "assignment in hash-like literal works" do
-    run(%(require "hash_single_entry"; Hash(Int32, Int32){k = 1 => v = 2}; k &+ v)).to_i.should eq(3)
+    run(%(require "compiler_spec_prelude/hash"; Hash(Int32, Int32){k = 1 => v = 2}; k &+ v)).to_i.should eq(3)
   end
 end

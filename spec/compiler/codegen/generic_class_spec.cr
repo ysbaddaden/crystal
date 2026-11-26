@@ -257,17 +257,8 @@ describe "Code gen: generic class type" do
 
   it "uses big integer as generic type argument (#2353)" do
     link_and_run(<<-CRYSTAL).status.success?.should be_true
-      require "checked_overflow"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
-
-      struct Int64
-        def - : Int64
-          0_i64 - self
-        end
-      end
+      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude/int"
 
       MIN_RANGE = -2374623294237463578
       MAX_RANGE = -MIN_RANGE
@@ -365,17 +356,8 @@ describe "Code gen: generic class type" do
 
   it "recomputes two calls that look the same due to generic type being instantiated (#7728)" do
     result = link_and_run(<<-CRYSTAL)
-      require "cast_failure"
-
-      lib LibC
-        fun puts(UInt8*) : Int32
-      end
-
-      class String
-        def to_unsafe : UInt8*
-          pointerof(@c)
-        end
-      end
+      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude/string"
 
       abstract class Base
       end
@@ -473,7 +455,7 @@ describe "Code gen: generic class type" do
 
   it "doesn't crash on generic type restriction with no subtypes (#7583)" do
     codegen(<<-CRYSTAL)
-      require "cleanup_raise"
+      require "compiler_spec_prelude/exceptions"
 
       class Foo
       end
@@ -562,11 +544,7 @@ describe "Code gen: generic class type" do
 
   it "codegens compile-time interpreted generic int128" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(4)
-      require "checked_overflow"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/exceptions"
 
       CONST = 1_i128 + 2_i128
       class Foo(T)

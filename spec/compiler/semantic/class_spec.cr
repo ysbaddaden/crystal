@@ -1,27 +1,5 @@
 require "../../spec_helper"
 
-private ABSTRACT_ARRAY_EACH = <<-CRYSTAL
-  lib LibC
-    fun exit(status : Int32) : NoReturn
-  end
-
-  def raise(message : String) : NoReturn
-    LibC.exit(1)
-  end
-
-  class Array(T)
-    @has_elements = false
-
-    def each
-      # Type-check the block while preserving the empty array's path past the call.
-      if @has_elements
-        element = uninitialized T
-        yield element
-      end
-    end
-  end
-  CRYSTAL
-
 describe "Semantic: class" do
   it "types Const#allocate" do
     assert_type("class Foo; end; Foo.allocate") { types["Foo"].as(NonGenericClassType) }
@@ -896,7 +874,8 @@ describe "Semantic: class" do
 
   it "can invoke method on abstract type without subclasses nor instances" do
     assert_type(<<-CRYSTAL) { int32 }
-      #{ABSTRACT_ARRAY_EACH}
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/exceptions"
 
       abstract class Foo
       end
@@ -909,7 +888,8 @@ describe "Semantic: class" do
 
   it "can invoke method on abstract generic type without subclasses nor instances" do
     assert_type(<<-CRYSTAL) { int32 }
-      #{ABSTRACT_ARRAY_EACH}
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/exceptions"
 
       abstract class Foo(T)
       end
@@ -922,7 +902,8 @@ describe "Semantic: class" do
 
   it "can invoke method on abstract generic type with subclasses but no instances" do
     assert_type(<<-CRYSTAL) { int32 }
-      #{ABSTRACT_ARRAY_EACH}
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/exceptions"
 
       abstract class Foo(T)
       end
@@ -1169,7 +1150,7 @@ describe "Semantic: class" do
 
   it "types as no return if calling method on abstract class with all abstract subclasses (#6996)" do
     assert_type(<<-CRYSTAL, inject_primitives: true) { no_return }
-      require "cleanup_raise"
+      require "compiler_spec_prelude/exceptions"
 
       abstract class Foo
         abstract def foo?
@@ -1184,7 +1165,7 @@ describe "Semantic: class" do
 
   it "types as no return if calling method on abstract class with generic subclasses but no instances (#6996)" do
     assert_type(<<-CRYSTAL, inject_primitives: true) { no_return }
-      require "cleanup_raise"
+      require "compiler_spec_prelude/exceptions"
 
       abstract class Foo
         abstract def foo?
@@ -1202,7 +1183,7 @@ describe "Semantic: class" do
 
   it "types as no return if calling method on abstract generic class (#6996)" do
     assert_type(<<-CRYSTAL, inject_primitives: true) { no_return }
-      require "cleanup_raise"
+      require "compiler_spec_prelude/exceptions"
 
       abstract class Foo(T)
         abstract def foo?
@@ -1214,7 +1195,7 @@ describe "Semantic: class" do
 
   it "types as no return if calling method on generic class with subclasses (#6996)" do
     assert_type(<<-CRYSTAL, inject_primitives: true) { no_return }
-      require "cleanup_raise"
+      require "compiler_spec_prelude/exceptions"
 
       abstract class Foo(T)
         abstract def foo?
@@ -1231,8 +1212,8 @@ describe "Semantic: class" do
 
   it "doesn't try to instantiate abstract generic struct when iterating subtypes (#9621)" do
     assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
-      require "literal_array_storage"
-      require "cleanup_raise"
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/exceptions"
 
       abstract struct Base; end
       struct A < Base; end

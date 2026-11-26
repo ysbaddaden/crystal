@@ -6,7 +6,7 @@ describe "Semantic: NoReturn" do
   end
 
   it "types raise as NoReturn" do
-    assert_type(%(require "cleanup_raise"; raise "foo")) { no_return }
+    assert_type(%(require "compiler_spec_prelude/exceptions"; raise "foo")) { no_return }
   end
 
   it "types union of NoReturn and something else" do
@@ -23,9 +23,7 @@ describe "Semantic: NoReturn" do
 
   it "assumes if condition's type filters when else is no return" do
     assert_type(<<-CRYSTAL) { int32 }
-      lib LibC
-        fun exit : NoReturn
-      end
+      require "compiler_spec_prelude/lib_c"
 
       class Foo
         def foo
@@ -34,7 +32,7 @@ describe "Semantic: NoReturn" do
       end
 
       foo = Foo.new || nil
-      LibC.exit unless foo
+      LibC.exit(1) unless foo
 
       foo.foo
       CRYSTAL
@@ -320,11 +318,9 @@ describe "Semantic: NoReturn" do
 
   it "types as NoReturn if typeof(exp)'s exp is NoReturn" do
     assert_type(<<-CRYSTAL) { no_return.metaclass }
-      lib LibC
-        fun exit : NoReturn
-      end
+      require "compiler_spec_prelude/lib_c"
 
-      typeof(LibC.exit.foo)
+      typeof(LibC.exit(1).foo)
       CRYSTAL
   end
 

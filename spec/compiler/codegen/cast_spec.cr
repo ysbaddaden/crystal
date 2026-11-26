@@ -21,13 +21,9 @@ describe "Code gen: cast" do
 
   it "casts from int to int" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "cast_failure"
-      require "numeric_abs"
-      require "checked_overflow"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude/float"
+      require "compiler_spec_prelude/int"
 
       a = 1
       b = a.as(Int32)
@@ -37,13 +33,9 @@ describe "Code gen: cast" do
 
   it "casts from union to single type" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "cast_failure"
-      require "numeric_abs"
-      require "checked_overflow"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude/float"
+      require "compiler_spec_prelude/int"
 
       a = 1 || 'a'
       b = a.as(Int32)
@@ -67,13 +59,9 @@ describe "Code gen: cast" do
 
   it "casts from union to another union" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "cast_failure"
-      require "numeric_abs"
-      require "checked_overflow"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude/float"
+      require "compiler_spec_prelude/int"
 
       a = 1 || 1.5 || 'a'
       b = a.as(Int32 | Float64)
@@ -159,11 +147,7 @@ describe "Code gen: cast" do
 
   it "casts from virtual to single type" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "cast_failure"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/exceptions"
 
       class CastSpecFoo
       end
@@ -218,11 +202,7 @@ describe "Code gen: cast" do
 
   it "casts to module" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "cast_failure"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/exceptions"
 
       module CastSpecMoo
         def moo
@@ -256,17 +236,7 @@ describe "Code gen: cast" do
 
   it "casts from nilable to nil" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "cast_failure"
-
-      struct Nil
-        def ==(other : Nil)
-          true
-        end
-      end
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/nil"
 
       a = 1 == 2 ? Reference.new : nil
       c = a.as(Nil)
@@ -346,11 +316,8 @@ describe "Code gen: cast" do
 
   it "casts (bug)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(123)
-      require "cast_failure"
+      require "compiler_spec_prelude/exceptions"
 
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
       (1 || 1.1).as(Int32)
       LibC.exit(123)
       CRYSTAL
@@ -492,11 +459,7 @@ describe "Code gen: cast" do
 
   it "casts from nilable type to virtual type (#3512)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "cast_failure"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/exceptions"
 
       class Foo
         def foo

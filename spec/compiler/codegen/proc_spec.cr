@@ -568,8 +568,8 @@ describe "Code gen: proc" do
 
   it "codegens proc that accepts array of type" do
     run(<<-CRYSTAL).to_i.should eq(2)
-      require "proc_closure"
-      require "literal_array_storage"
+      require "compiler_spec_prelude/proc"
+      require "compiler_spec_prelude/array"
 
       class Foo
         def foo
@@ -709,7 +709,7 @@ describe "Code gen: proc" do
 
   it "codegens proc to implicit self in constant (#647)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "single_threaded_once"
+      require "compiler_spec_prelude/once"
 
       module Foo
         def self.blah
@@ -769,12 +769,8 @@ describe "Code gen: proc" do
 
   it "uses alias of proc with virtual type (#1347)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "hash_single_entry"
-      require "single_threaded_once"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/hash"
+      require "compiler_spec_prelude/once"
 
       class Class1
         def foo
@@ -967,11 +963,7 @@ describe "Code gen: proc" do
 
   it "calls function pointer" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "cleanup_raise"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/exceptions"
 
       fun foo(f : Int32 -> Int32) : Int32
         f.call(1)

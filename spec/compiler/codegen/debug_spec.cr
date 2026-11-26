@@ -222,7 +222,7 @@ describe "Code gen: debug" do
 
   it "emits global debug info once for constants read before assignment" do
     mod = codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "single_threaded_once"
+      require "compiler_spec_prelude/once"
 
       struct Bar
         def initialize(@x : Int32)
@@ -274,7 +274,7 @@ describe "Code gen: debug" do
 
   it "stores and restores debug location after jumping to main (#6920)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "single_threaded_once"
+      require "compiler_spec_prelude/once"
 
       Module.method
 
@@ -325,7 +325,7 @@ describe "Code gen: debug" do
 
   it "doesn't fail on constant read calls (#11416)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "single_threaded_once"
+      require "compiler_spec_prelude/once"
 
       class Foo
         def foo

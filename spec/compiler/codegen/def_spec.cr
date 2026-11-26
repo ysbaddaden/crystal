@@ -56,21 +56,8 @@ describe "Code gen: def" do
 
   it "unifies all calls to same def" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
-
-      require "literal_array_storage"
-      require "checked_overflow"
-
-      class Array(T)
-        def push(value : T) : self
-          @buffer = @buffer.realloc((@size + 1).to_u64!)
-          @buffer[@size] = value
-          @size += 1
-          self
-        end
-      end
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/exceptions"
 
       def raise(msg)
         nil
@@ -166,7 +153,7 @@ describe "Code gen: def" do
 
   it "codegens and doesn't break if obj is int and there's a mutation" do
     run(<<-CRYSTAL)
-      require "array_single_entry"
+      require "compiler_spec_prelude/array"
 
       struct Int
         def baz(x)

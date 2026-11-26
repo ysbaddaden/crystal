@@ -130,19 +130,7 @@ describe "Code gen: module" do
 
   it "codegens pointer of module with block" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "cleanup_raise"
-
-      class Object
-        def not_nil!
-          self
-        end
-      end
-
-      struct Nil
-        def not_nil!
-          raise "unexpected nil"
-        end
-      end
+      require "compiler_spec_prelude/nil"
 
       module Moo
       end
@@ -241,7 +229,7 @@ describe "Code gen: module" do
 
   it "codegens proc of a module that was never included" do
     codegen(<<-CRYSTAL)
-      require "cleanup_raise"
+      require "compiler_spec_prelude/exceptions"
 
       module Moo
       end
@@ -545,11 +533,7 @@ describe "Code gen: module" do
 
   it "casts to union of module that is included in other module (#3323)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
-      require "cast_failure"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/exceptions"
 
       module Moo
         def moo
@@ -582,11 +566,7 @@ describe "Code gen: module" do
 
   it "casts to union of generic module that is included in other module (#3323)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
-      require "cast_failure"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/exceptions"
 
       module Moo(T)
         def moo

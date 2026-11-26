@@ -185,13 +185,8 @@ describe "Semantic: cast" do
     assert_type(<<-CRYSTAL) { array_of(int32) }
       require "primitives"
       require "object/properties"
-      require "array_map"
-      require "semantic_exception"
-
-      class NilAssertionError < Exception
-        def initialize(message : String)
-        end
-      end
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/exceptions"
 
       class Foo
         property! x : Int32

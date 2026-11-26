@@ -586,11 +586,7 @@ describe "Code gen: struct" do
 
   it "can cast virtual struct to specific struct" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-       require "cast_failure"
-
-       lib LibC
-         fun exit(status : Int32) : NoReturn
-       end
+       require "compiler_spec_prelude/exceptions"
 
        abstract struct Foo
        end
@@ -633,7 +629,7 @@ describe "Code gen: struct" do
 
   it "can call new on abstract struct with single child (#7309)" do
     codegen(<<-CRYSTAL)
-      require "cleanup_raise"
+      require "compiler_spec_prelude/exceptions"
 
       abstract struct Foo
         @x = 1

@@ -224,7 +224,7 @@ describe "Code gen: struct" do
 
   it "builds struct setter with fun type (1)" do
     codegen(<<-CRYSTAL)
-      require "cleanup_raise"
+      require "compiler_spec_prelude/exceptions"
 
       lib LibC
         struct Foo
@@ -239,7 +239,7 @@ describe "Code gen: struct" do
 
   it "builds struct setter with fun type (2)" do
     codegen(<<-CRYSTAL)
-      require "cleanup_raise"
+      require "compiler_spec_prelude/exceptions"
 
       lib LibC
         struct Foo

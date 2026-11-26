@@ -1,3 +1,5 @@
+require "./lib_c"
+
 # Stores a single key and value for codegen specs.
 class Hash(K, V)
   def initialize
@@ -21,8 +23,4 @@ class Hash(K, V)
   def each_value(& : V ->)
     yield @value if @has_entry
   end
-end
-
-lib LibC
-  fun abort : NoReturn
 end

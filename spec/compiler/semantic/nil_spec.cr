@@ -21,13 +21,7 @@ describe "Semantic: nil" do
     assert_type(<<-CRYSTAL) { int32 }
       require "primitives"
       require "object/properties"
-      require "array_literal"
-
-      class Array(T)
-         def last : T
-           to_unsafe.value
-         end
-       end
+      require "compiler_spec_prelude/array"
 
       class Foo
         getter :var

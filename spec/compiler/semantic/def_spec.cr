@@ -206,8 +206,7 @@ describe "Semantic: def" do
 
   it "lookups methods in super modules" do
     assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
-      require "array_literal"
-      require "array_access"
+      require "compiler_spec_prelude/array"
 
       module Foo
         def lookup_matches(x = 1)

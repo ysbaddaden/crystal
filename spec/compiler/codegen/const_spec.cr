@@ -172,7 +172,7 @@ describe "Codegen: const" do
 
   it "allows implicit self in constant, called from another class (bug)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "single_threaded_once"
+      require "compiler_spec_prelude/once"
 
       module Foo
         def self.foo
@@ -194,8 +194,8 @@ describe "Codegen: const" do
 
   it "codegens two consts with same variable name" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "checked_overflow"
-      require "single_threaded_once"
+      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude/once"
 
       CONST1 = begin
             a = 1
@@ -286,11 +286,8 @@ describe "Codegen: const" do
 
   it "uses const before declaring it (hoisting)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
-      require "single_threaded_once"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/lib_c"
 
       x = CONST
 
@@ -308,12 +305,8 @@ describe "Codegen: const" do
 
   it "uses const before declaring it in another module" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
-      require "single_threaded_once"
-      require "checked_overflow"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/exceptions"
 
       def foo
         a = 1
@@ -358,11 +351,8 @@ describe "Codegen: const" do
 
   it "gets pointerof constant" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
-      require "single_threaded_once"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/lib_c"
 
       z = pointerof(FOO).value
       FOO = 10
@@ -372,11 +362,8 @@ describe "Codegen: const" do
 
   it "gets pointerof complex constant" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
-      require "single_threaded_once"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/lib_c"
 
       z = pointerof(FOO).value
       FOO = begin
@@ -389,11 +376,8 @@ describe "Codegen: const" do
 
   it "gets pointerof constant inside class" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(42)
-      require "single_threaded_once"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/lib_c"
 
       class Foo
         BAR = 42
@@ -524,11 +508,8 @@ describe "Codegen: const" do
 
   it "runs const side effects (#8862)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
-      require "single_threaded_once"
-
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/lib_c"
 
       class Foo
         @@x = 0

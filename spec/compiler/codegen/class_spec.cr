@@ -912,12 +912,8 @@ describe "Code gen: class" do
 
   it "works with array in variable initializer in non-generic type (#855)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
-
-      require "literal_array_storage"
-      require "checked_overflow"
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/exceptions"
 
       class Foo
         @ary = [1, 2, 3]
@@ -933,12 +929,8 @@ describe "Code gen: class" do
 
   it "works with array in variable initializer in generic type (#855)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
-
-      require "literal_array_storage"
-      require "checked_overflow"
+      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude/exceptions"
 
       class Foo(T)
         @ary = [1, 2, 3]

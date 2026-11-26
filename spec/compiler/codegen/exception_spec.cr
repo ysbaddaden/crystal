@@ -27,8 +27,7 @@ describe "Code gen: exception" do
 
   it "codegens exception handler with return" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "unreachable_unwind"
-      require "checked_overflow"
+      require "compiler_spec_prelude/exceptions"
 
       def foo
         begin
@@ -74,8 +73,7 @@ describe "Code gen: exception" do
 
   it "executes body if nothing raised (1)" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "unreachable_unwind"
-      require "checked_overflow"
+      require "compiler_spec_prelude/exceptions"
 
       y = 1
       x = begin
@@ -122,8 +120,7 @@ describe "Code gen: exception" do
 
   it "can result into union (1)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "unreachable_unwind"
-      require "checked_overflow"
+      require "compiler_spec_prelude/exceptions"
 
       x = begin
             1
@@ -169,7 +166,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when no exception is raised (1)" do
     run(<<-CRYSTAL).to_i.should eq(10)
-      require "unreachable_unwind"
+      require "compiler_spec_prelude/exceptions"
 
       a = 0
       b = begin
@@ -185,7 +182,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when no exception is raised (2)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "unreachable_unwind"
+      require "compiler_spec_prelude/exceptions"
 
       a = 0
       b = begin
@@ -299,7 +296,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when the main block returns" do
     run(<<-CRYSTAL).to_i.should eq(0)
-      require "unreachable_unwind"
+      require "compiler_spec_prelude/exceptions"
 
       struct Nil; def to_i; 0; end; end
 
@@ -318,7 +315,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when the main block returns" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "unreachable_unwind"
+      require "compiler_spec_prelude/exceptions"
 
       def foo(x)
         begin
@@ -336,7 +333,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when the main block yields and returns" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "unreachable_unwind"
+      require "compiler_spec_prelude/exceptions"
 
       def foo2(x)
         begin
@@ -519,7 +516,7 @@ describe "Code gen: exception" do
 
   it "executes else if no exception is raised (1)" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "unreachable_unwind"
+      require "compiler_spec_prelude/exceptions"
 
       x = 1
       y = begin
@@ -534,7 +531,7 @@ describe "Code gen: exception" do
 
   it "executes else if no exception is raised (2)" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "unreachable_unwind"
+      require "compiler_spec_prelude/exceptions"
 
       x = 1
       y = begin
@@ -736,7 +733,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of break inside while inside body" do
     run(<<-CRYSTAL).to_i.should eq(123)
-      require "unreachable_unwind"
+      require "compiler_spec_prelude/exceptions"
 
       a = 0
       while true
@@ -752,8 +749,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of break inside while inside body with nested handlers" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "unreachable_unwind"
-      require "checked_overflow"
+      require "compiler_spec_prelude/exceptions"
 
       a = 0
       b = 0
@@ -775,7 +771,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of break inside while inside body with block" do
     run(<<-CRYSTAL).to_i.should eq(0)
-      require "unreachable_unwind"
+      require "compiler_spec_prelude/exceptions"
 
       class Global
         @@a = 0
@@ -835,7 +831,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of break inside while inside else" do
     run(<<-CRYSTAL).to_i.should eq(123)
-      require "unreachable_unwind"
+      require "compiler_spec_prelude/exceptions"
 
       a = 0
       while true
@@ -853,7 +849,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of next inside while inside body" do
     run(<<-CRYSTAL).to_i.should eq(123)
-      require "unreachable_unwind"
+      require "compiler_spec_prelude/exceptions"
 
       a = 0
       continue = true
@@ -905,8 +901,7 @@ describe "Code gen: exception" do
 
   it "executes ensure from return until target" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "unreachable_unwind"
-      require "checked_overflow"
+      require "compiler_spec_prelude/exceptions"
 
       def foo
         yield
@@ -927,8 +922,7 @@ describe "Code gen: exception" do
 
   it "executes ensure from return until target" do
     run(<<-CRYSTAL).to_i.should eq(2)
-      require "unreachable_unwind"
-      require "checked_overflow"
+      require "compiler_spec_prelude/exceptions"
 
       class Global
         @@x = 0
@@ -967,8 +961,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of next inside block" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "unreachable_unwind"
-      require "checked_overflow"
+      require "compiler_spec_prelude/exceptions"
 
       def foo
         yield
@@ -996,8 +989,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of next inside block" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "unreachable_unwind"
-      require "checked_overflow"
+      require "compiler_spec_prelude/exceptions"
 
       class Global
         @@a = 0
@@ -1045,8 +1037,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of break inside block" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "unreachable_unwind"
-      require "checked_overflow"
+      require "compiler_spec_prelude/exceptions"
 
       def foo
         yield
@@ -1074,7 +1065,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of calling method when doing break inside block (#1233)" do
     run(<<-CRYSTAL).to_i.should eq(123)
-      require "unreachable_unwind"
+      require "compiler_spec_prelude/exceptions"
 
       class Global
         @@x = 0
@@ -1313,9 +1304,8 @@ describe "Code gen: exception" do
 
   it "closures rescue variable (#8141)" do
     codegen(<<-CRYSTAL)
-      require "unreachable_unwind"
-      require "semantic_exception"
-      require "proc_closure"
+      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude/proc"
 
       def invoke(&block)
         block.call

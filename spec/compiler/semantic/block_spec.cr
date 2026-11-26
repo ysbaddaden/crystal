@@ -370,7 +370,7 @@ describe "Block inference" do
 
   it "checks block type with virtual type" do
     assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
-      require "array_map"
+      require "compiler_spec_prelude/array"
 
       class Foo
         def to_s
@@ -392,7 +392,7 @@ describe "Block inference" do
 
   it "maps block of union types to union types" do
     assert_type(<<-CRYSTAL, inject_primitives: true) { array_of(union_of(types["Foo1"].virtual_type, types["Foo2"].virtual_type)) }
-      require "array_map"
+      require "compiler_spec_prelude/array"
 
       class Foo1
       end

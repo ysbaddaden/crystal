@@ -70,7 +70,7 @@ describe "Code gen: c union" do
 
   it "builds union setter with fun type" do
     codegen(<<-CRYSTAL)
-      require "cleanup_raise"
+      require "compiler_spec_prelude/exceptions"
 
       lib LibC
         union Foo
@@ -217,34 +217,8 @@ describe "Code gen: c union" do
 
   it "moves unions around correctly (#12550)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
-      lib LibC
-        fun exit(status : Int32) : NoReturn
-      end
-
-      require "checked_overflow"
-
-      struct StaticArray(T, N)
-        def fill
-          index = 0
-          buffer = pointerof(@buffer)
-          while index < N
-            (buffer + index.to_i64!).value = yield index
-            index += 1
-          end
-          self
-        end
-
-        def sum
-          total = 0
-          index = 0
-          buffer = pointerof(@buffer)
-          while index < N
-            total += (buffer + index.to_i64!).value
-            index += 1
-          end
-          total
-        end
-      end
+      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude/static_array"
 
       lib Lib
         struct Foo
