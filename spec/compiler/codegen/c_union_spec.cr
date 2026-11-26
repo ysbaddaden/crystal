@@ -216,8 +216,35 @@ describe "Code gen: c union" do
   end
 
   it "moves unions around correctly (#12550)" do
-    run(<<-CRYSTAL).to_i.should eq((1..6).sum)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      require "checked_overflow"
+
+      struct StaticArray(T, N)
+        def fill
+          index = 0
+          buffer = pointerof(@buffer)
+          while index < N
+            (buffer + index.to_i64!).value = yield index
+            index += 1
+          end
+          self
+        end
+
+        def sum
+          total = 0
+          index = 0
+          buffer = pointerof(@buffer)
+          while index < N
+            total += (buffer + index.to_i64!).value
+            index += 1
+          end
+          total
+        end
+      end
 
       lib Lib
         struct Foo
@@ -237,7 +264,7 @@ describe "Code gen: c union" do
         a
       end
 
-      foo.padding.sum
+      LibC.exit(foo.padding.sum == #{(1..6).sum} ? 0 : 1)
       CRYSTAL
   end
 end

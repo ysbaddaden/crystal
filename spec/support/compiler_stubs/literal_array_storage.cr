@@ -24,6 +24,12 @@ class Array(T)
     end
   end
 
+  def sum
+    total = 0
+    each { |element| total += element }
+    total
+  end
+
   def to_unsafe
     @buffer
   end

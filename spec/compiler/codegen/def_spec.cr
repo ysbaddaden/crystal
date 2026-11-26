@@ -55,8 +55,22 @@ describe "Code gen: def" do
   end
 
   it "unifies all calls to same def" do
-    run(<<-CRYSTAL).to_i.should eq(1)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      require "literal_array_storage"
+      require "checked_overflow"
+
+      class Array(T)
+        def push(value : T) : self
+          @buffer = @buffer.realloc((@size + 1).to_u64!)
+          @buffer[@size] = value
+          @size += 1
+          self
+        end
+      end
 
       def raise(msg)
         nil
@@ -82,7 +96,7 @@ describe "Code gen: def" do
 
       hash = Hash2.new
       hash[1] = 2
-      hash[1]
+      LibC.exit(hash[1])
       CRYSTAL
   end
 

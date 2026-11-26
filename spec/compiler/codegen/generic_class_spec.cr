@@ -364,8 +364,18 @@ describe "Code gen: generic class type" do
   end
 
   it "recomputes two calls that look the same due to generic type being instantiated (#7728)" do
-    run(<<-CRYSTAL).to_string.should eq("hello")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "cast_failure"
+
+      lib LibC
+        fun puts(UInt8*) : Int32
+      end
+
+      class String
+        def to_unsafe : UInt8*
+          pointerof(@c)
+        end
+      end
 
       abstract class Base
       end
@@ -386,8 +396,10 @@ describe "Code gen: generic class type" do
 
       foo(Gen.new(1) || Gen.new(1.5))
       foo(Gen.new(true) || Gen.new(1_u8))
-      foo(Gen.new("hello") || Gen.new('z')).as(String)
+      LibC.puts(foo(Gen.new("hello") || Gen.new('z')).as(String).to_unsafe)
       CRYSTAL
+    result.status.exit_code.should eq(0)
+    result.output.should eq("hello\n")
   end
 
   it "doesn't consider abstract types for including types (#7200)" do

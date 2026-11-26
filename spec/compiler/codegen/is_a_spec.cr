@@ -792,11 +792,22 @@ describe "Codegen: is_a?" do
   end
 
   it "visits 1.to_s twice, may trigger enclosing_call (#4364)" do
-    run(<<-CRYSTAL).to_b.should be_true
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      require "class"
+
+      # This test observes the conversion result through its type.
+      struct Int32
+        def to_s : String
+          "1"
+        end
+      end
 
       B = String
-      1.to_s.is_a?(B)
+      LibC.exit(1.to_s.is_a?(B) ? 0 : 1)
       CRYSTAL
   end
 

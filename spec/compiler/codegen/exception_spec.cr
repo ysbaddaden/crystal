@@ -1313,7 +1313,9 @@ describe "Code gen: exception" do
 
   it "closures rescue variable (#8141)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      require "unreachable_unwind"
+      require "semantic_exception"
+      require "proc_closure"
 
       def invoke(&block)
         block.call

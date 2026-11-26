@@ -183,7 +183,15 @@ describe "Semantic: cast" do
 
   it "casts to target type even if can't infer casted value type (obsolete)" do
     assert_type(<<-CRYSTAL) { array_of(int32) }
-      require "prelude"
+      require "primitives"
+      require "object/properties"
+      require "array_map"
+      require "semantic_exception"
+
+      class NilAssertionError < Exception
+        def initialize(message : String)
+        end
+      end
 
       class Foo
         property! x : Int32

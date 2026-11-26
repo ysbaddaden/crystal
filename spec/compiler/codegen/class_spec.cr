@@ -911,8 +911,13 @@ describe "Code gen: class" do
   end
 
   it "works with array in variable initializer in non-generic type (#855)" do
-    run(<<-CRYSTAL).to_i.should eq(6)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      require "literal_array_storage"
+      require "checked_overflow"
 
       class Foo
         @ary = [1, 2, 3]
@@ -922,13 +927,18 @@ describe "Code gen: class" do
         end
       end
 
-      Foo.new.sum
+      LibC.exit(Foo.new.sum)
       CRYSTAL
   end
 
   it "works with array in variable initializer in generic type (#855)" do
-    run(<<-CRYSTAL).to_i.should eq(6)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
+      lib LibC
+        fun exit(status : Int32) : NoReturn
+      end
+
+      require "literal_array_storage"
+      require "checked_overflow"
 
       class Foo(T)
         @ary = [1, 2, 3]
@@ -938,7 +948,7 @@ describe "Code gen: class" do
         end
       end
 
-      Foo(Int32).new.sum
+      LibC.exit(Foo(Int32).new.sum)
       CRYSTAL
   end
 
