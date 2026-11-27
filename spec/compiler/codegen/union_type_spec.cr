@@ -136,7 +136,7 @@ describe "Code gen: union type" do
 
   it "assigns union to larger union" do
     link_and_run(<<-CRYSTAL).status.success?.should be_true
-      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude"
 
       a = 1
       a = 1.1_f32
@@ -150,7 +150,7 @@ describe "Code gen: union type" do
 
   it "assigns union to larger union when source is nilable 1" do
     link_and_run(<<-CRYSTAL).status.success?.should be_true
-      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude"
 
       a = 1
       b = nil
@@ -164,7 +164,7 @@ describe "Code gen: union type" do
 
   it "assigns union to larger union when source is nilable 2" do
     link_and_run(<<-CRYSTAL).status.success?.should be_true
-      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude"
 
       a = 1
       b = Reference.new

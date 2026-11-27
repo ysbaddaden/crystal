@@ -95,43 +95,43 @@ describe "Semantic: tuples" do
 
   describe "#[](RangeLiteral)" do
     it "types, inbound begin" do
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0..-3])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0..-2])) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0..-1])) { tuple_of([int32, char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0..0])) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0..1])) { tuple_of([int32, char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0..2])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0..-3])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0..-2])) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0..-1])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0..0])) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0..1])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0..2])) { tuple_of([int32, char]) }
 
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1..-3])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1..-2])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1..-1])) { tuple_of([char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1..0])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1..1])) { tuple_of([char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1..2])) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1..-3])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1..-2])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1..-1])) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1..0])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1..1])) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1..2])) { tuple_of([char]) }
 
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2..-3])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2..-2])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2..-1])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2..0])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2..1])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2..2])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2..-3])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2..-2])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2..-1])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2..0])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2..1])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2..2])) { tuple_of([] of Type) }
 
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1..-3])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1..-2])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1..-1])) { tuple_of([char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1..0])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1..1])) { tuple_of([char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1..2])) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1..-3])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1..-2])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1..-1])) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1..0])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1..1])) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1..2])) { tuple_of([char]) }
 
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2..-3])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2..-2])) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2..-1])) { tuple_of([int32, char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2..0])) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2..1])) { tuple_of([int32, char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2..2])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2..-3])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2..-2])) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2..-1])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2..0])) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2..1])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2..2])) { tuple_of([int32, char]) }
 
       assert_type(<<-CRYSTAL) { tuple_of([] of Type) }
-        require "compiler_spec_prelude/range"
+        require "compiler_spec_prelude"
 
         def tuple(*args)
           args
@@ -142,14 +142,14 @@ describe "Semantic: tuples" do
     end
 
     it "types, inbound begin, end-less" do
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0..])) { tuple_of([int32, char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1..])) { tuple_of([char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2..])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1..])) { tuple_of([char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2..])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0..])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1..])) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2..])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1..])) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2..])) { tuple_of([int32, char]) }
 
       assert_type(<<-CRYSTAL) { tuple_of([] of Type) }
-        require "compiler_spec_prelude/range"
+        require "compiler_spec_prelude"
 
         def tuple(*args)
           args
@@ -160,15 +160,15 @@ describe "Semantic: tuples" do
     end
 
     it "types, begin-less" do
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[..0])) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[..1])) { tuple_of([int32, char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[..2])) { tuple_of([int32, char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[..-3])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[..-2])) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[..-1])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[..0])) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[..1])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[..2])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[..-3])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[..-2])) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[..-1])) { tuple_of([int32, char]) }
 
       assert_type(<<-CRYSTAL) { tuple_of([] of Type) }
-        require "compiler_spec_prelude/range"
+        require "compiler_spec_prelude"
 
         def tuple(*args)
           args
@@ -179,10 +179,10 @@ describe "Semantic: tuples" do
     end
 
     it "types, begin-less, end-less" do
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[..])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[..])) { tuple_of([int32, char]) }
 
       assert_type(<<-CRYSTAL) { tuple_of([] of Type) }
-        require "compiler_spec_prelude/range"
+        require "compiler_spec_prelude"
 
         def tuple(*args)
           args
@@ -193,80 +193,80 @@ describe "Semantic: tuples" do
     end
 
     it "types, exclusive range" do
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0...-2])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0...-1])) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0...0])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0...1])) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0...2])) { tuple_of([int32, char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0...3])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0...-2])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0...-1])) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0...0])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0...1])) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0...2])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0...3])) { tuple_of([int32, char]) }
 
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1...-2])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1...-1])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1...0])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1...1])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1...2])) { tuple_of([char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1...3])) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1...-2])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1...-1])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1...0])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1...1])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1...2])) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1...3])) { tuple_of([char]) }
 
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2...-2])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2...-1])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2...0])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2...1])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2...2])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2...3])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2...-2])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2...-1])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2...0])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2...1])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2...2])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2...3])) { tuple_of([] of Type) }
 
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1...-2])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1...-1])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1...0])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1...1])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1...2])) { tuple_of([char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1...3])) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1...-2])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1...-1])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1...0])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1...1])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1...2])) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1...3])) { tuple_of([char]) }
 
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2...-2])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2...-1])) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2...0])) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2...1])) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2...2])) { tuple_of([int32, char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2...3])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2...-2])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2...-1])) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2...0])) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2...1])) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2...2])) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2...3])) { tuple_of([int32, char]) }
     end
 
     it "types, inbound begin, nilable" do
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0..-3]?)) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0..-2]?)) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0..-1]?)) { tuple_of([int32, char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0..0]?)) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0..1]?)) { tuple_of([int32, char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[0..2]?)) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0..-3]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0..-2]?)) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0..-1]?)) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0..0]?)) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0..1]?)) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[0..2]?)) { tuple_of([int32, char]) }
 
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1..-3]?)) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1..-2]?)) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1..-1]?)) { tuple_of([char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1..0]?)) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1..1]?)) { tuple_of([char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[1..2]?)) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1..-3]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1..-2]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1..-1]?)) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1..0]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1..1]?)) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[1..2]?)) { tuple_of([char]) }
 
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2..-3]?)) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2..-2]?)) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2..-1]?)) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2..0]?)) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2..1]?)) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[2..2]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2..-3]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2..-2]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2..-1]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2..0]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2..1]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[2..2]?)) { tuple_of([] of Type) }
 
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1..-3]?)) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1..-2]?)) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1..-1]?)) { tuple_of([char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1..0]?)) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1..1]?)) { tuple_of([char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-1..2]?)) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1..-3]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1..-2]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1..-1]?)) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1..0]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1..1]?)) { tuple_of([char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-1..2]?)) { tuple_of([char]) }
 
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2..-3]?)) { tuple_of([] of Type) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2..-2]?)) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2..-1]?)) { tuple_of([int32, char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2..0]?)) { tuple_of([int32]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2..1]?)) { tuple_of([int32, char]) }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-2..2]?)) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2..-3]?)) { tuple_of([] of Type) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2..-2]?)) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2..-1]?)) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2..0]?)) { tuple_of([int32]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2..1]?)) { tuple_of([int32, char]) }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-2..2]?)) { tuple_of([int32, char]) }
 
       assert_type(<<-CRYSTAL) { tuple_of([] of Type) }
-        require "compiler_spec_prelude/range"
+        require "compiler_spec_prelude"
 
         def tuple(*args)
           args
@@ -277,11 +277,11 @@ describe "Semantic: tuples" do
     end
 
     it "types, out of bound begin, nilable" do
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[-3..0]?)) { nil_type }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}[3..2]?)) { nil_type }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[-3..0]?)) { nil_type }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}[3..2]?)) { nil_type }
 
       assert_type(<<-CRYSTAL) { nil_type }
-        require "compiler_spec_prelude/range"
+        require "compiler_spec_prelude"
 
         def tuple(*args)
           args
@@ -292,28 +292,28 @@ describe "Semantic: tuples" do
     end
 
     it "types, metaclass index" do
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}.class[0..1]), inject_primitives: true) { tuple_of([int32, char]).metaclass }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}.class[1..2]), inject_primitives: true) { tuple_of([char]).metaclass }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}.class[1..-2]), inject_primitives: true) { tuple_of([] of Type).metaclass }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}.class[-2..-1]), inject_primitives: true) { tuple_of([int32, char]).metaclass }
-      assert_type(%(require "compiler_spec_prelude/range"; {1, 'a'}.class[-1..0]), inject_primitives: true) { tuple_of([] of Type).metaclass }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}.class[0..1]), inject_primitives: true) { tuple_of([int32, char]).metaclass }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}.class[1..2]), inject_primitives: true) { tuple_of([char]).metaclass }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}.class[1..-2]), inject_primitives: true) { tuple_of([] of Type).metaclass }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}.class[-2..-1]), inject_primitives: true) { tuple_of([int32, char]).metaclass }
+      assert_type(%(require "compiler_spec_prelude"; {1, 'a'}.class[-1..0]), inject_primitives: true) { tuple_of([] of Type).metaclass }
     end
 
     it "gives error when begin index is out of range" do
       assert_error <<-CRYSTAL, "begin index out of bounds for Tuple(Int32, Char) (3 not in -2..2)"
-        require "compiler_spec_prelude/range"
+        require "compiler_spec_prelude"
 
         {1, 'a'}[3..0]
         CRYSTAL
 
       assert_error <<-CRYSTAL, "begin index out of bounds for Tuple(Int32, Char) (-3 not in -2..2)"
-        require "compiler_spec_prelude/range"
+        require "compiler_spec_prelude"
 
         {1, 'a'}[-3..0]
         CRYSTAL
 
       assert_error <<-CRYSTAL, "begin index out of bounds for Tuple() (1 not in 0..0)"
-        require "compiler_spec_prelude/range"
+        require "compiler_spec_prelude"
 
         def tuple(*args)
           args
@@ -382,8 +382,7 @@ describe "Semantic: tuples" do
   it "errors on recursive splat expansion (1) (#361)" do
     assert_error <<-CRYSTAL, "recursive splat expansion"
       require "primitives"
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/tuple"
+      require "compiler_spec_prelude"
 
       struct Tuple
         def to_a : Array(Union(*T))
@@ -489,7 +488,7 @@ describe "Semantic: tuples" do
 
   it "accepts tuple covariance in array" do
     assert_type(<<-CRYSTAL) { tuple_of [types["Foo"].virtual_type!, types["Foo"].virtual_type!] }
-      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude"
 
       class Foo
       end
@@ -562,7 +561,7 @@ describe "Semantic: tuples" do
 
   it "errors on tuple too big (#3816)" do
     assert_error <<-CRYSTAL, "tuple size cannot be greater than 300 (size is 302)"
-      require "compiler_spec_prelude/tuple"
+      require "compiler_spec_prelude"
 
       pos = {0, 0}
       while true
@@ -595,7 +594,7 @@ describe "Semantic: tuples" do
 
   it "doesn't crash on tuple in not executed block (#6718)" do
     assert_type(<<-CRYSTAL) { nil_type }
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       def pending(&block)
       end

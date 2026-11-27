@@ -56,8 +56,7 @@ describe "Code gen: def" do
 
   it "unifies all calls to same def" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       def raise(msg)
         nil
@@ -153,7 +152,7 @@ describe "Code gen: def" do
 
   it "codegens and doesn't break if obj is int and there's a mutation" do
     run(<<-CRYSTAL)
-      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude"
 
       struct Int
         def baz(x)

@@ -21,7 +21,7 @@ describe "Semantic: nil" do
     assert_type(<<-CRYSTAL) { int32 }
       require "primitives"
       require "object/properties"
-      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude"
 
       class Foo
         getter :var

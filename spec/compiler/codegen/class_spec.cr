@@ -865,8 +865,7 @@ describe "Code gen: class" do
 
   it "works with array in variable initializer in non-generic type (#855)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       class Foo
         @ary = [1, 2, 3]
@@ -882,8 +881,7 @@ describe "Code gen: class" do
 
   it "works with array in variable initializer in generic type (#855)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       class Foo(T)
         @ary = [1, 2, 3]
@@ -1092,7 +1090,7 @@ describe "Code gen: class" do
 
   it "doesn't crash on abstract class never instantiated (#2840)" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       abstract class Foo
       end

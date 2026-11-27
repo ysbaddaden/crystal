@@ -41,7 +41,7 @@ describe "Semantic: exception" do
 
   it "type for exception handler for explicit types" do
     assert_type(<<-CRYSTAL) { int32 }
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       class MyEx < Exception
       end
@@ -221,7 +221,7 @@ describe "Semantic: exception" do
 
   it "types var as nilable inside ensure (1)" do
     result = assert_type(<<-CRYSTAL) { int32 }
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       def p(value)
       end
@@ -243,7 +243,7 @@ describe "Semantic: exception" do
 
   it "types var as nilable inside ensure (2)" do
     result = assert_type(<<-CRYSTAL) { int32 }
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       def p(value)
       end
@@ -399,7 +399,7 @@ describe "Semantic: exception" do
 
   it "shadows local variable (1)" do
     assert_type(<<-CRYSTAL) { union_of(int32, types["Exception"].virtual_type) }
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       a = 1
       begin
@@ -413,7 +413,7 @@ describe "Semantic: exception" do
 
   it "remains nilable after rescue" do
     assert_type(<<-CRYSTAL) { nilable types["Exception"].virtual_type }
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       begin
         raise "OH NO"

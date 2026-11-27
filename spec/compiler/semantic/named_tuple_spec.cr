@@ -265,7 +265,7 @@ describe "Semantic: named tuples" do
 
   it "accepts named tuple covariance in array" do
     assert_type(<<-CRYSTAL) { named_tuple_of({"x": types["Foo"].virtual_type!, "y": types["Foo"].virtual_type!}) }
-      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude"
 
       class Foo
       end
@@ -299,7 +299,7 @@ describe "Semantic: named tuples" do
 
   it "doesn't crash on named tuple in not executed block (#6718)" do
     assert_type(<<-CRYSTAL) { nil_type }
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       def pending(&block)
       end

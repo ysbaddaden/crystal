@@ -148,7 +148,7 @@ describe "Semantic: module" do
 
   it "works with int including enumerable" do
     assert_type(<<-CRYSTAL) { array_of(float64) }
-      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude"
 
       struct Int32
         include Enumerable(Int32)
@@ -165,9 +165,7 @@ describe "Semantic: module" do
 
   it "works with range and map" do
     assert_type(<<-CRYSTAL) { array_of(float64) }
-      require "compiler_spec_prelude/range"
-      require "compiler_spec_prelude/int"
-      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude"
 
       (1..3).map { |x| x * 0.5 }
       CRYSTAL

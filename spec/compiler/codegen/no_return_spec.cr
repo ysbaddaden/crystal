@@ -22,7 +22,7 @@ describe "Code gen: no return" do
 
   it "codegen types exception handler as NoReturn if ensure is NoReturn" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       lib LibC
         fun foo : NoReturn
@@ -82,7 +82,7 @@ describe "Code gen: no return" do
 
   it "codegens untyped typeof (#5105)" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       typeof(raise("").foo)
       CRYSTAL

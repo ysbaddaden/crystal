@@ -320,7 +320,7 @@ describe "Code gen: block" do
 
   it "call block from dispatch and use local vars" do
     run(<<-CRYSTAL).to_i.should eq(4)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       def bar(y)
         yield y
@@ -361,7 +361,7 @@ describe "Code gen: block" do
 
   it "break block with yielder inside while" do
     run(<<-CRYSTAL).to_i.should eq(6)
-      require "compiler_spec_prelude/int"
+      require "compiler_spec_prelude"
 
       a = 0
       10.times do
@@ -438,8 +438,7 @@ describe "Code gen: block" do
   it "break from block with value" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(20)
       require "primitives"
-      require "compiler_spec_prelude/int"
-      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude"
 
       result = 10.times { break 20 }
       LibC.exit(result || 0)
@@ -906,7 +905,7 @@ describe "Code gen: block" do
 
   it "codegens dispatch with block and break (1)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       class Foo(T)
         def initialize(@x : T)
@@ -929,8 +928,7 @@ describe "Code gen: block" do
 
   it "codegens dispatch with block and break (2)" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       a = [1, 2, 3] || [1.5]
       n = 0
@@ -1032,8 +1030,7 @@ describe "Code gen: block" do
 
   it "uses block inside array literal (bug)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/int"
+      require "compiler_spec_prelude"
 
       def foo
         yield 1
@@ -1610,7 +1607,7 @@ describe "Code gen: block" do
 
   it "codegens proc forwarding from an unused yielded block value (#17125)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude"
 
       private struct Foo
         def initialize(@proc : String ->)

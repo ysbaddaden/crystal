@@ -1,8 +1,6 @@
-require "./lib_c"
-
 class String
-  # Only the inferred result type is needed by the semantic specs.
   def self.interpolation(*values) : String
+    # Only the inferred result type is needed by the semantic specs.
     ""
   end
 

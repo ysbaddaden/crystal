@@ -92,7 +92,7 @@ describe "semantic: case" do
 
   it "checks exhaustiveness of enum via question method" do
     assert_error <<-CRYSTAL, "case is not exhaustive for enum Color.\n\nMissing members:\n - Green\n - Blue", inject_primitives: true
-      require "compiler_spec_prelude/enum"
+      require "compiler_spec_prelude"
 
       enum Color
         Red
@@ -109,7 +109,7 @@ describe "semantic: case" do
 
   it "checks exhaustiveness of enum via const" do
     assert_error <<-CRYSTAL, "case is not exhaustive for enum Color.\n\nMissing members:\n - Green\n - Blue"
-      require "compiler_spec_prelude/enum"
+      require "compiler_spec_prelude"
 
       enum Color
         Red
@@ -126,8 +126,7 @@ describe "semantic: case" do
 
   it "checks exhaustiveness of enum (all cases covered)" do
     assert_no_errors <<-CRYSTAL, inject_primitives: true
-      require "compiler_spec_prelude/enum"
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       enum Color
         Red
@@ -146,8 +145,7 @@ describe "semantic: case" do
 
   it "checks exhaustiveness of enum through method (all cases covered)" do
     assert_no_errors <<-CRYSTAL, inject_primitives: true
-      require "compiler_spec_prelude/enum"
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       enum Color
         Red
@@ -253,7 +251,7 @@ describe "semantic: case" do
 
   it "can't prove case is exhaustive for @[Flags] enum" do
     assert_error <<-CRYSTAL, <<-ERROR
-      require "compiler_spec_prelude/enum"
+      require "compiler_spec_prelude"
 
       struct Enum
         def includes?(other : self)
@@ -285,8 +283,7 @@ describe "semantic: case" do
 
   it "can prove case is exhaustive for @[Flags] enum when matching type" do
     assert_no_errors <<-CRYSTAL
-      require "compiler_spec_prelude/enum"
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       @[Flags]
       enum Color
@@ -304,7 +301,7 @@ describe "semantic: case" do
 
   it "can't prove case is exhaustive for @[Flags] enum, tuple case" do
     assert_error <<-CRYSTAL, <<-ERROR
-      require "compiler_spec_prelude/enum"
+      require "compiler_spec_prelude"
 
       struct Enum
         def includes?(other : self)
@@ -336,7 +333,7 @@ describe "semantic: case" do
 
   it "checks exhaustiveness of enum combined with another type" do
     assert_error <<-CRYSTAL, "case is not exhaustive for enum Color.\n\nMissing members:\n - Green\n - Blue", inject_primitives: true
-      require "compiler_spec_prelude/enum"
+      require "compiler_spec_prelude"
 
       enum Color
         Red
@@ -433,7 +430,7 @@ describe "semantic: case" do
 
   it "checks exhaustiveness for tuple literal of 2 elements, first is enum" do
     assert_error <<-CRYSTAL, "case is not exhaustive.\n\nMissing cases:\n - {Color::Green, Char}", inject_primitives: true
-      require "compiler_spec_prelude/enum"
+      require "compiler_spec_prelude"
 
       enum Color
         Red
@@ -450,7 +447,7 @@ describe "semantic: case" do
 
   it "checks exhaustiveness for tuple literal of 3 elements, all enums" do
     assert_error <<-CRYSTAL, <<-ERROR, inject_primitives: true
-      require "compiler_spec_prelude/enum"
+      require "compiler_spec_prelude"
 
       enum Color
         Red
@@ -538,7 +535,7 @@ describe "semantic: case" do
 
   it "checks exhaustiveness for tuple literal with bool and underscore at first position" do
     assert_error <<-CRYSTAL, "case is not exhaustive.\n\nMissing cases:\n - {Color, Char}"
-      require "compiler_spec_prelude/enum"
+      require "compiler_spec_prelude"
 
       enum Color
         Red
@@ -554,7 +551,7 @@ describe "semantic: case" do
 
   it "checks exhaustiveness for tuple literal with bool and underscore at first position, partial match" do
     assert_error <<-CRYSTAL, "case is not exhaustive.\n\nMissing cases:\n - {Color::Red, Char}\n - {Color::Green, Char}", inject_primitives: true
-      require "compiler_spec_prelude/enum"
+      require "compiler_spec_prelude"
 
       enum Color
         Red
@@ -571,7 +568,7 @@ describe "semantic: case" do
 
   it "checks exhaustiveness for tuple literal with bool and underscore at second position" do
     assert_error <<-CRYSTAL, "case is not exhaustive.\n\nMissing cases:\n - {Char, Color}"
-      require "compiler_spec_prelude/enum"
+      require "compiler_spec_prelude"
 
       enum Color
         Red
@@ -587,7 +584,7 @@ describe "semantic: case" do
 
   it "checks exhaustiveness for tuple literal with bool and underscore at second position, partial match" do
     assert_error <<-CRYSTAL, "case is not exhaustive.\n\nMissing cases:\n - {Char, Color::Red}\n - {Char, Color::Green}", inject_primitives: true
-      require "compiler_spec_prelude/enum"
+      require "compiler_spec_prelude"
 
       enum Color
         Red

@@ -142,9 +142,8 @@ describe "Code gen: hash literal spec" do
 
   it "doesn't crash on hash literal with proc pointer (#646)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/hash"
+      require "compiler_spec_prelude"
 
-      require "compiler_spec_prelude/string"
 
       def blah
         1
@@ -214,10 +213,10 @@ describe "Code gen: hash literal spec" do
   end
 
   it "assignment in hash literal works" do
-    run(%(require "compiler_spec_prelude/hash"; {k = 1 => v = 2}; k &+ v)).to_i.should eq(3)
+    run(%(require "compiler_spec_prelude"; {k = 1 => v = 2}; k &+ v)).to_i.should eq(3)
   end
 
   it "assignment in hash-like literal works" do
-    run(%(require "compiler_spec_prelude/hash"; Hash(Int32, Int32){k = 1 => v = 2}; k &+ v)).to_i.should eq(3)
+    run(%(require "compiler_spec_prelude"; Hash(Int32, Int32){k = 1 => v = 2}; k &+ v)).to_i.should eq(3)
   end
 end

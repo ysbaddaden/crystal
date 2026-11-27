@@ -44,7 +44,7 @@ describe "Code gen: lib" do
 
   it "allows passing type to LibC if it has a converter with to_unsafe (bug)" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/string"
+      require "compiler_spec_prelude"
 
       lib LibC
         fun foo(x : UInt8*)

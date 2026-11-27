@@ -3,8 +3,7 @@ require "../../spec_helper"
 describe "Semantic: yield with scope" do
   it "uses scope in global method" do
     run(<<-CRYSTAL).to_i.should eq(2)
-      require "compiler_spec_prelude/exceptions"
-      require "compiler_spec_prelude/int"
+      require "compiler_spec_prelude"
 
       def foo; with 1 yield; end
 
@@ -16,8 +15,7 @@ describe "Semantic: yield with scope" do
 
   it "uses scope in instance method" do
     run(<<-CRYSTAL).to_i.should eq(2)
-      require "compiler_spec_prelude/exceptions"
-      require "compiler_spec_prelude/int"
+      require "compiler_spec_prelude"
 
       def foo; with 1 yield; end
 
@@ -59,9 +57,7 @@ describe "Semantic: yield with scope" do
 
   it "it invokes global method inside block of yield scope" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "compiler_spec_prelude/exceptions"
-      require "compiler_spec_prelude/float"
-      require "compiler_spec_prelude/int"
+      require "compiler_spec_prelude"
 
       def foo
         with -1 yield

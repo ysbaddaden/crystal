@@ -3,7 +3,7 @@ require "../../spec_helper"
 describe "Code gen: exception" do
   it "codegens rescue specific leaf exception" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Foo < Exception
       end
@@ -29,7 +29,7 @@ describe "Code gen: exception" do
 
   it "codegens exception handler with return" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       def foo
         begin
@@ -45,7 +45,7 @@ describe "Code gen: exception" do
 
   it "does ensure after rescue which returns (#171)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Global
         @@x = 0
@@ -75,7 +75,7 @@ describe "Code gen: exception" do
 
   it "executes body if nothing raised (1)" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       y = 1
       x = begin
@@ -89,7 +89,7 @@ describe "Code gen: exception" do
 
   it "executes rescue if something is raised conditionally" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(8)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
       y = 1
       x = 1
 
@@ -105,7 +105,7 @@ describe "Code gen: exception" do
 
   it "executes rescue if something is raised unconditionally" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       y = 1
       x = 1
@@ -121,7 +121,7 @@ describe "Code gen: exception" do
 
   it "can result into union (1)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       x = begin
             1
@@ -134,7 +134,7 @@ describe "Code gen: exception" do
 
   it "can result into union (2)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       y = begin
             1 > 0 ? raise("Oh no!") : 0
@@ -147,7 +147,7 @@ describe "Code gen: exception" do
 
   it "handles nested exceptions" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
       a = 0
       b = begin
             begin
@@ -166,7 +166,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when no exception is raised (1)" do
     run(<<-CRYSTAL).to_i.should eq(10)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       a = 0
       b = begin
@@ -182,7 +182,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when no exception is raised (2)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       a = 0
       b = begin
@@ -198,7 +198,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when exception is raised (1)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       a = 0
       b = begin
@@ -215,7 +215,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when exception is raised (2)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
       a = 0
       b = begin
             a = 1
@@ -231,7 +231,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when exception is unhandled (1)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception; end
 
@@ -254,7 +254,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when exception is unhandled (2)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(4)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception; end
 
@@ -277,7 +277,7 @@ describe "Code gen: exception" do
 
   it "ensure without rescue" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       a = 0
       begin
@@ -295,7 +295,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when the main block returns" do
     run(<<-CRYSTAL).to_i.should eq(0)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       struct Nil; def to_i; 0; end; end
 
@@ -314,7 +314,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when the main block returns" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       def foo(x)
         begin
@@ -332,7 +332,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when the main block yields and returns" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       def foo2(x)
         begin
@@ -356,7 +356,7 @@ describe "Code gen: exception" do
 
   it "rescues with type" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -375,7 +375,7 @@ describe "Code gen: exception" do
 
   it "rescues with types defaults to generic rescue" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -396,7 +396,7 @@ describe "Code gen: exception" do
 
   it "handles exception in outer block (1)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -419,7 +419,7 @@ describe "Code gen: exception" do
 
   it "handles exception in outer block (2)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -442,7 +442,7 @@ describe "Code gen: exception" do
 
   it "handles subclass" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -460,7 +460,7 @@ describe "Code gen: exception" do
 
   it "handle multiple exception types (1)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -477,7 +477,7 @@ describe "Code gen: exception" do
 
   it "handle multiple exception types (2)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception; end
       class Ex2 < Exception; end
@@ -494,8 +494,7 @@ describe "Code gen: exception" do
 
   it "receives exception object" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/class"
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception
       end
@@ -515,7 +514,7 @@ describe "Code gen: exception" do
 
   it "executes else if no exception is raised (1)" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       x = 1
       y = begin
@@ -530,7 +529,7 @@ describe "Code gen: exception" do
 
   it "executes else if no exception is raised (2)" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       x = 1
       y = begin
@@ -545,7 +544,7 @@ describe "Code gen: exception" do
 
   it "doesn't execute else if exception is raised (1)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception; end
 
@@ -563,7 +562,7 @@ describe "Code gen: exception" do
 
   it "doesn't execute else if exception is raised (2)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception; end
 
@@ -581,7 +580,7 @@ describe "Code gen: exception" do
 
   it "doesn't execute else if exception is raised conditionally (1)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception; end
 
@@ -599,7 +598,7 @@ describe "Code gen: exception" do
 
   it "doesn't execute else if exception is raised conditionally (2)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Ex1 < Exception; end
 
@@ -617,7 +616,7 @@ describe "Code gen: exception" do
 
   it "handle exception raised by proc literal" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       x = 0
       f = -> { raise "Foo" if 1 == 1 }
@@ -632,7 +631,7 @@ describe "Code gen: exception" do
 
   it "codegens issue #118 (1)" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       begin
         raise "hey"
@@ -645,7 +644,7 @@ describe "Code gen: exception" do
 
   it "codegens issue #118 (2)" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       n = nil
       begin
@@ -659,7 +658,7 @@ describe "Code gen: exception" do
 
   it "captures exception thrown from proc" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       def foo
         ->{ raise "OH NO" }.call
@@ -677,7 +676,7 @@ describe "Code gen: exception" do
 
   it "uses exception after rescue" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       begin
         raise "OH NO"
@@ -693,7 +692,7 @@ describe "Code gen: exception" do
 
   it "doesn't codegen duplicated ensure if unreachable (#709)" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Foo
         def initialize
@@ -715,7 +714,7 @@ describe "Code gen: exception" do
 
   it "executes ensure when raising inside rescue" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       a = 1
 
@@ -736,7 +735,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of break inside while inside body" do
     run(<<-CRYSTAL).to_i.should eq(123)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       a = 0
       while true
@@ -752,7 +751,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of break inside while inside body with nested handlers" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       a = 0
       b = 0
@@ -774,7 +773,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of break inside while inside body with block" do
     run(<<-CRYSTAL).to_i.should eq(0)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       class Global
         @@a = 0
@@ -816,7 +815,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of break inside while inside rescue" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(123)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       a = 0
       while true
@@ -834,7 +833,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of break inside while inside else" do
     run(<<-CRYSTAL).to_i.should eq(123)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       a = 0
       while true
@@ -852,7 +851,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of next inside while inside body" do
     run(<<-CRYSTAL).to_i.should eq(123)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       a = 0
       continue = true
@@ -870,8 +869,7 @@ describe "Code gen: exception" do
 
   it "executes return inside rescue, executing ensure" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
-      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude"
 
       class Global
         @@x = 0
@@ -905,7 +903,7 @@ describe "Code gen: exception" do
 
   it "executes ensure from return until target" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       def foo
         yield
@@ -926,7 +924,7 @@ describe "Code gen: exception" do
 
   it "executes ensure from return until target" do
     run(<<-CRYSTAL).to_i.should eq(2)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       class Global
         @@x = 0
@@ -965,7 +963,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of next inside block" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       def foo
         yield
@@ -993,7 +991,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of next inside block" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       class Global
         @@a = 0
@@ -1041,7 +1039,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of break inside block" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       def foo
         yield
@@ -1069,7 +1067,7 @@ describe "Code gen: exception" do
 
   it "executes ensure of calling method when doing break inside block (#1233)" do
     run(<<-CRYSTAL).to_i.should eq(123)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       class Global
         @@x = 0
@@ -1098,7 +1096,7 @@ describe "Code gen: exception" do
 
   it "propagates raise status (#2074)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Foo
         @var : Var?
@@ -1142,7 +1140,7 @@ describe "Code gen: exception" do
 
   it "doesn't crash on #1988" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(42)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       begin
         x = 42
@@ -1160,8 +1158,7 @@ describe "Code gen: exception" do
 
   it "runs #2441" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
-      require "compiler_spec_prelude/string"
+      require "compiler_spec_prelude"
 
       while true
         begin
@@ -1181,7 +1178,7 @@ describe "Code gen: exception" do
 
   it "can rescue TypeCastError (#2607)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(42)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       rs = begin
              (1 || "foo").as(String)
@@ -1197,7 +1194,7 @@ describe "Code gen: exception" do
 
   it "can use argument in rescue (#2844)" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       def foo(exe)
         begin
@@ -1217,7 +1214,7 @@ describe "Code gen: exception" do
 
   it "can use argument in rescue, with a different type (1) (#2844)" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       def foo(exe)
         begin
@@ -1237,7 +1234,7 @@ describe "Code gen: exception" do
 
   it "can use argument in rescue, with a different type (2) (#2844)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       def foo(exe)
         begin
@@ -1254,7 +1251,7 @@ describe "Code gen: exception" do
 
   it "runs NoReturn ensure (#3082)" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       begin
         LibC.printf "1"
@@ -1275,7 +1272,7 @@ describe "Code gen: exception" do
 
   it "catches exception thrown by as inside method (#4030)" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       def foo
         a = 1 || ""
@@ -1296,7 +1293,7 @@ describe "Code gen: exception" do
 
   it "types parenthesized expression (#5511)" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       x = begin
             ((raise "foo").bar).baz
@@ -1311,7 +1308,7 @@ describe "Code gen: exception" do
 
   it "codegens return from rescue with value" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(5)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       def foo
         begin
@@ -1327,8 +1324,7 @@ describe "Code gen: exception" do
 
   it "closures rescue variable (#8141)" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/exceptions"
-      require "compiler_spec_prelude/proc"
+      require "compiler_spec_prelude"
 
       def invoke(&block)
         block.call
@@ -1346,7 +1342,7 @@ describe "Code gen: exception" do
 
   it "handles rescuing module type" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       module Foo; end
 
@@ -1366,7 +1362,7 @@ describe "Code gen: exception" do
 
   it "handles rescuing union between module type and class type" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       module Foo; end
 
@@ -1389,7 +1385,7 @@ describe "Code gen: exception" do
 
   it "handles rescuing union between module types" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       module Foo; end
       module Bar; end
@@ -1414,7 +1410,7 @@ describe "Code gen: exception" do
 
   it "does not rescue just any module" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       module Foo; end
       module Bar; end
@@ -1439,7 +1435,7 @@ describe "Code gen: exception" do
 
   it "rescues a valid union" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       module Foo; end
       module Bar; end
@@ -1460,7 +1456,7 @@ describe "Code gen: exception" do
 
   it "rescues a valid nested union" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       module Foo; end
       module Bar; end
@@ -1482,7 +1478,7 @@ describe "Code gen: exception" do
 
   it "does not rescue just any union" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       module Foo; end
       module Bar; end

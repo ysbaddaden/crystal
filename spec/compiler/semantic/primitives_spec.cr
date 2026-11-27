@@ -88,7 +88,7 @@ describe "Semantic: primitives" do
 
   it "computes correct hash value type if it's a function literal (#320)" do
     assert_type(<<-CRYSTAL) { generic_class "Hash", string, proc_of(bool) }
-      require "compiler_spec_prelude/hash"
+      require "compiler_spec_prelude"
 
       {"foo" => ->{ true }}
       CRYSTAL

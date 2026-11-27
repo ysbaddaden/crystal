@@ -224,7 +224,7 @@ describe "Code gen: struct" do
 
   it "builds struct setter with fun type (1)" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       lib LibC
         struct Foo
@@ -239,7 +239,7 @@ describe "Code gen: struct" do
 
   it "builds struct setter with fun type (2)" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       lib LibC
         struct Foo
@@ -345,7 +345,7 @@ describe "Code gen: struct" do
 
   it "sets instance var to proc" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       lib LibFoo
         struct Foo

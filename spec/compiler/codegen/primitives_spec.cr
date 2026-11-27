@@ -17,7 +17,7 @@ describe "Code gen: primitives" do
   it "codegens int128" do
     # Keep 128-bit operations on the linked path because of LLVM GenericValue limitations.
     link_and_run(<<-CRYSTAL).status.success?.should be_true
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       LibC.exit(1_i128.to_i == 1 ? 0 : 1)
       CRYSTAL
@@ -25,7 +25,7 @@ describe "Code gen: primitives" do
 
   it "codegens uint128" do
     link_and_run(<<-CRYSTAL).status.success?.should be_true
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       LibC.exit(1_u128.to_i == 1 ? 0 : 1)
       CRYSTAL
@@ -56,7 +56,7 @@ describe "Code gen: primitives" do
     # generation of the compiler
 
     it "codegens 1 + 2" do
-      run(%(require "compiler_spec_prelude/exceptions"; 1 + 2)).to_i.should eq(3)
+      run(%(require "compiler_spec_prelude"; 1 + 2)).to_i.should eq(3)
     end
 
     it "codegens 1 &+ 2" do
@@ -64,7 +64,7 @@ describe "Code gen: primitives" do
     end
 
     it "codegens 1 - 2" do
-      run(%(require "compiler_spec_prelude/exceptions"; 1 - 2)).to_i.should eq(-1)
+      run(%(require "compiler_spec_prelude"; 1 - 2)).to_i.should eq(-1)
     end
 
     it "codegens 1 &- 2" do
@@ -72,7 +72,7 @@ describe "Code gen: primitives" do
     end
 
     it "codegens 2 * 3" do
-      run(%(require "compiler_spec_prelude/exceptions"; 2 * 3)).to_i.should eq(6)
+      run(%(require "compiler_spec_prelude"; 2 * 3)).to_i.should eq(6)
     end
 
     it "codegens 2 &* 3" do
@@ -100,7 +100,7 @@ describe "Code gen: primitives" do
     end
 
     it "codegens 1.to_i16" do
-      run(%(require "compiler_spec_prelude/exceptions"; 1.to_i16)).to_i.should eq(1)
+      run(%(require "compiler_spec_prelude"; 1.to_i16)).to_i.should eq(1)
     end
 
     it "codegens 1.to_f!" do

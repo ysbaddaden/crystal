@@ -1,6 +1,3 @@
-require "./indexable"
-require "./lib_c"
-
 struct Tuple
   include Indexable(Union(*T))
 

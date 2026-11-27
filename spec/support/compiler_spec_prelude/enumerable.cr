@@ -1,6 +1,3 @@
-require "./lib_c"
-require "./array"
-
 module Enumerable(T)
   def map(& : T -> U) : Array(U) forall U
     result = Array(U).new

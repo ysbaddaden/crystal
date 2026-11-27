@@ -157,8 +157,7 @@ describe "Codegen: is_a?" do
 
   it "evaluates method on filtered union type 3" do
     run(<<-CRYSTAL).to_i.should eq(5)
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       a = 1
       a = [1.1]
@@ -285,7 +284,7 @@ describe "Codegen: is_a?" do
 
   it "codegens is_a? with a Const does comparison and gives true" do
     run(<<-CRYSTAL).to_b.should be_true
-      require "compiler_spec_prelude/int"
+      require "compiler_spec_prelude"
       CONST = 1
       1.is_a?(CONST)
       CRYSTAL
@@ -293,7 +292,7 @@ describe "Codegen: is_a?" do
 
   it "codegens is_a? with a Const does comparison and gives false" do
     run(<<-CRYSTAL).to_b.should be_false
-      require "compiler_spec_prelude/int"
+      require "compiler_spec_prelude"
       CONST = 1
       2.is_a?(CONST)
       CRYSTAL
@@ -787,8 +786,7 @@ describe "Codegen: is_a?" do
 
   it "visits 1.to_s twice, may trigger enclosing_call (#4364)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
-      require "compiler_spec_prelude/lib_c"
-      require "compiler_spec_prelude/class"
+      require "compiler_spec_prelude"
 
       # This test observes the conversion result through its type.
       struct Int32
@@ -922,7 +920,7 @@ describe "Codegen: is_a?" do
 
   it "does is_a? for generic type against generic class instance type (#12304)" do
     run(<<-CRYSTAL).to_b.should be_true
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       class A
       end

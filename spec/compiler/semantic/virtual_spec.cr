@@ -136,7 +136,7 @@ describe "Semantic: virtual" do
 
   it "works with restriction alpha" do
     assert_no_errors <<-CRYSTAL, inject_primitives: true
-      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude"
 
       class Foo
       end

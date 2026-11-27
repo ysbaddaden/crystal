@@ -77,9 +77,7 @@ describe "Code gen: debug" do
 
   it "codegens correct debug info for untyped expression (#4007 and #4008)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "compiler_spec_prelude/lib_c"
-      require "compiler_spec_prelude/int"
-      require "compiler_spec_prelude/string"
+      require "compiler_spec_prelude"
 
       int = 3
       case int
@@ -110,7 +108,7 @@ describe "Code gen: debug" do
 
   it "correctly restores debug location after fun change (#4254)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude"
 
       class Foo
         def self.one
@@ -136,7 +134,7 @@ describe "Code gen: debug" do
 
   it "has correct debug location after constant initialization in call with block (#4719)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude"
 
       fun __crystal_malloc_atomic(size : UInt32) : Void*
         x = uninitialized Void*
@@ -224,7 +222,7 @@ describe "Code gen: debug" do
 
   it "emits global debug info once for constants read before assignment" do
     mod = codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude"
 
       struct Bar
         def initialize(@x : Int32)
@@ -276,7 +274,7 @@ describe "Code gen: debug" do
 
   it "stores and restores debug location after jumping to main (#6920)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude"
 
       Module.method
 
@@ -327,7 +325,7 @@ describe "Code gen: debug" do
 
   it "doesn't fail on constant read calls (#11416)" do
     codegen(<<-CRYSTAL, debug: Crystal::Debug::All)
-      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude"
 
       class Foo
         def foo

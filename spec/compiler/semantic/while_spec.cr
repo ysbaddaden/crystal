@@ -313,7 +313,7 @@ describe "Semantic: while" do
 
   it "types variable as nilable if raise before assign" do
     assert_type(<<-CRYSTAL) { nilable int32 }
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       while true
         begin

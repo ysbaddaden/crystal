@@ -3,9 +3,7 @@ require "../../spec_helper"
 describe "Code gen: alias" do
   it "invokes methods on empty array of recursive alias (1)" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/lib_c"
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/string"
+      require "compiler_spec_prelude"
 
       class Object
         def to_s
@@ -24,9 +22,7 @@ describe "Code gen: alias" do
 
   it "invokes methods on empty array of recursive alias (2)" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/lib_c"
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/string"
+      require "compiler_spec_prelude"
 
       class Object
         def to_s
@@ -45,9 +41,7 @@ describe "Code gen: alias" do
 
   it "invokes methods on empty array of recursive alias (3)" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/lib_c"
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/string"
+      require "compiler_spec_prelude"
 
       class Object
         def to_s
@@ -66,7 +60,7 @@ describe "Code gen: alias" do
 
   it "casts to recursive alias" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Bar(T)
       end

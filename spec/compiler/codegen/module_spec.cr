@@ -130,7 +130,7 @@ describe "Code gen: module" do
 
   it "codegens pointer of module with block" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/nil"
+      require "compiler_spec_prelude"
 
       module Moo
       end
@@ -229,7 +229,7 @@ describe "Code gen: module" do
 
   it "codegens proc of a module that was never included" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       module Moo
       end
@@ -259,7 +259,7 @@ describe "Code gen: module" do
 
   it "invokes method on yielded module that has no instances (#1079)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       module Mod
       end
@@ -534,7 +534,7 @@ describe "Code gen: module" do
 
   it "casts to union of module that is included in other module (#3323)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       module Moo
         def moo
@@ -567,7 +567,7 @@ describe "Code gen: module" do
 
   it "casts to union of generic module that is included in other module (#3323)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(10)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       module Moo(T)
         def moo

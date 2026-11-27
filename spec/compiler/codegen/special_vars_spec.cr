@@ -17,8 +17,7 @@ describe "Codegen: special vars" do
 
     it "codegens #{name} with nilable (1)" do
       result = link_and_run(<<-CRYSTAL)
-        require "compiler_spec_prelude/raise"
-        require "compiler_spec_prelude/nil"
+        require "compiler_spec_prelude"
 
         def foo
           if 1 == 2
@@ -42,8 +41,7 @@ describe "Codegen: special vars" do
 
     it "codegens #{name} with nilable (2)" do
       result = link_and_run(<<-CRYSTAL)
-        require "compiler_spec_prelude/raise"
-        require "compiler_spec_prelude/nil"
+        require "compiler_spec_prelude"
 
         def foo
           if 1 == 1

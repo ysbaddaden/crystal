@@ -17,7 +17,7 @@ describe "Semantic: special vars" do
 
     it "types #{name} when not defined as no return" do
       assert_type(<<-CRYSTAL) { no_return }
-        require "compiler_spec_prelude/nil"
+        require "compiler_spec_prelude"
 
         #{name}
         CRYSTAL

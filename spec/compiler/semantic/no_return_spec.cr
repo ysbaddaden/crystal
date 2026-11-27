@@ -6,7 +6,7 @@ describe "Semantic: NoReturn" do
   end
 
   it "types raise as NoReturn" do
-    assert_type(%(require "compiler_spec_prelude/exceptions"; raise "foo")) { no_return }
+    assert_type(%(require "compiler_spec_prelude"; raise "foo")) { no_return }
   end
 
   it "types union of NoReturn and something else" do
@@ -23,7 +23,7 @@ describe "Semantic: NoReturn" do
 
   it "assumes if condition's type filters when else is no return" do
     assert_type(<<-CRYSTAL) { int32 }
-      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude"
 
       class Foo
         def foo
@@ -41,7 +41,7 @@ describe "Semantic: NoReturn" do
   it "computes NoReturn in a lazy way inside if then (#314) (1)" do
     assert_type(<<-CRYSTAL) { union_of(int32, string) }
       require "primitives"
-      require "compiler_spec_prelude/nil"
+      require "compiler_spec_prelude"
 
       a = 1
       b = 1
@@ -64,7 +64,7 @@ describe "Semantic: NoReturn" do
   it "computes NoReturn in a lazy way inside if then (#314) (2)" do
     assert_type(<<-CRYSTAL) { int32 }
       require "primitives"
-      require "compiler_spec_prelude/nil"
+      require "compiler_spec_prelude"
 
       a = 1
       b = 1
@@ -86,7 +86,7 @@ describe "Semantic: NoReturn" do
   it "computes NoReturn in a lazy way inside if then (#314) (3)" do
     assert_type(<<-CRYSTAL) { nilable(string) }
       require "primitives"
-      require "compiler_spec_prelude/nil"
+      require "compiler_spec_prelude"
 
       a = 1
       c = nil
@@ -113,7 +113,7 @@ describe "Semantic: NoReturn" do
   it "computes NoReturn in a lazy way inside if then (#314) (4)" do
     assert_type(<<-CRYSTAL) { nil_type }
       require "primitives"
-      require "compiler_spec_prelude/nil"
+      require "compiler_spec_prelude"
 
       a = 1
       c = nil
@@ -139,7 +139,7 @@ describe "Semantic: NoReturn" do
   it "computes NoReturn in a lazy way inside if then (#314) (5)" do
     assert_error <<-CRYSTAL, "undefined method 'coco' for Nil"
       require "primitives"
-      require "compiler_spec_prelude/nil"
+      require "compiler_spec_prelude"
 
       struct Foo
         def coco
@@ -169,7 +169,7 @@ describe "Semantic: NoReturn" do
   it "computes NoReturn in a lazy way inside if else (#314) (1)" do
     assert_type(<<-CRYSTAL) { union_of(int32, string) }
       require "primitives"
-      require "compiler_spec_prelude/nil"
+      require "compiler_spec_prelude"
 
       a = 1
       b = 1
@@ -193,7 +193,7 @@ describe "Semantic: NoReturn" do
   it "computes NoReturn in a lazy way inside if else (#314) (2)" do
     assert_type(<<-CRYSTAL) { int32 }
       require "primitives"
-      require "compiler_spec_prelude/nil"
+      require "compiler_spec_prelude"
 
       a = 1
       b = 1
@@ -216,7 +216,7 @@ describe "Semantic: NoReturn" do
   it "computes NoReturn in a lazy way inside if else (#314) (3)" do
     assert_type(<<-CRYSTAL) { nilable(string) }
       require "primitives"
-      require "compiler_spec_prelude/nil"
+      require "compiler_spec_prelude"
 
       a = 1
       c = nil
@@ -244,7 +244,7 @@ describe "Semantic: NoReturn" do
   it "computes NoReturn in a lazy way inside if else (#314) (4)" do
     assert_type(<<-CRYSTAL) { nil_type }
       require "primitives"
-      require "compiler_spec_prelude/nil"
+      require "compiler_spec_prelude"
 
       a = 1
       c = nil
@@ -271,7 +271,7 @@ describe "Semantic: NoReturn" do
   it "computes NoReturn in a lazy way inside if else (#314) (5)" do
     assert_error <<-CRYSTAL, "undefined method 'coco' for Nil"
       require "primitives"
-      require "compiler_spec_prelude/nil"
+      require "compiler_spec_prelude"
 
       struct Foo
         def coco
@@ -338,7 +338,7 @@ describe "Semantic: NoReturn" do
 
   it "types as NoReturn if typeof(exp)'s exp is NoReturn" do
     assert_type(<<-CRYSTAL) { no_return.metaclass }
-      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude"
 
       typeof(LibC.exit(1).foo)
       CRYSTAL

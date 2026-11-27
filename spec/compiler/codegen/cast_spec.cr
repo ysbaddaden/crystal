@@ -21,9 +21,7 @@ describe "Code gen: cast" do
 
   it "casts from int to int" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/exceptions"
-      require "compiler_spec_prelude/float"
-      require "compiler_spec_prelude/int"
+      require "compiler_spec_prelude"
 
       a = 1
       b = a.as(Int32)
@@ -33,9 +31,7 @@ describe "Code gen: cast" do
 
   it "casts from union to single type" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/exceptions"
-      require "compiler_spec_prelude/float"
-      require "compiler_spec_prelude/int"
+      require "compiler_spec_prelude"
 
       a = 1 || 'a'
       b = a.as(Int32)
@@ -45,8 +41,7 @@ describe "Code gen: cast" do
 
   it "casts from union to single type raises TypeCastError" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
-      require "compiler_spec_prelude/class"
+      require "compiler_spec_prelude"
 
       a = 1 || 'a'
       begin
@@ -64,9 +59,7 @@ describe "Code gen: cast" do
 
   it "casts from union to another union" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/exceptions"
-      require "compiler_spec_prelude/float"
-      require "compiler_spec_prelude/int"
+      require "compiler_spec_prelude"
 
       a = 1 || 1.5 || 'a'
       b = a.as(Int32 | Float64)
@@ -76,8 +69,7 @@ describe "Code gen: cast" do
 
   it "casts from union to another union raises TypeCastError" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
-      require "compiler_spec_prelude/class"
+      require "compiler_spec_prelude"
 
       a = 1 || 1.5 || 'a'
       begin
@@ -95,7 +87,7 @@ describe "Code gen: cast" do
 
   it "upcasts from union to union with different alignment" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(4)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       a = 4 || 2_i64
       x = a.as(Int32 | Int64 | Int128)
@@ -106,7 +98,7 @@ describe "Code gen: cast" do
 
   it "downcasts from union to union with different alignment" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(4)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       a = 4 || 2_i64 || 3_i128
       x = a.as(Int32 | Int64)
@@ -117,7 +109,7 @@ describe "Code gen: cast" do
 
   it "sidecasts from union to union with different alignment" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(4)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       a = 4 || 2_i64
       x = a.as(Int32 | Int128)
@@ -163,7 +155,7 @@ describe "Code gen: cast" do
 
   it "casts from virtual to single type" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       class CastSpecFoo
       end
@@ -185,8 +177,7 @@ describe "Code gen: cast" do
 
   it "casts from virtual to single type raises TypeCastError" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
-      require "compiler_spec_prelude/class"
+      require "compiler_spec_prelude"
 
       class CastSpecFoo
       end
@@ -223,7 +214,7 @@ describe "Code gen: cast" do
 
   it "casts to module" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       module CastSpecMoo
         def moo
@@ -257,7 +248,7 @@ describe "Code gen: cast" do
 
   it "casts from nilable to nil" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/nil"
+      require "compiler_spec_prelude"
 
       a = 1 == 2 ? Reference.new : nil
       c = a.as(Nil)
@@ -267,8 +258,7 @@ describe "Code gen: cast" do
 
   it "casts from nilable to nil raises TypeCastError" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
-      require "compiler_spec_prelude/class"
+      require "compiler_spec_prelude"
 
       a = 1 == 1 ? Reference.new : nil
       begin
@@ -342,7 +332,7 @@ describe "Code gen: cast" do
 
   it "casts (bug)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(123)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       (1 || 1.1).as(Int32)
       LibC.exit(123)
@@ -427,7 +417,7 @@ describe "Code gen: cast" do
 
   it "casts with block var that changes type (#3341)" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Object
         def try
@@ -445,7 +435,7 @@ describe "Code gen: cast" do
 
   it "casts between union types, where union has a tuple type (#3377)" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       v = 1 || true || 1.0
       (v || {v}).as(Bool | Float64)
@@ -485,7 +475,7 @@ describe "Code gen: cast" do
 
   it "casts from nilable type to virtual type (#3512)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       class Foo
         def foo

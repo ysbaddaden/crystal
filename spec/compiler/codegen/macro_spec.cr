@@ -921,9 +921,7 @@ describe "Code gen: macro" do
 
   it "recalculates method when virtual metaclass type is added" do
     link_and_run(<<-CRYSTAL).status.success?.should be_true
-      require "compiler_spec_prelude/raise"
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude"
 
       class Global
         @@x = [] of String
@@ -1385,7 +1383,7 @@ describe "Code gen: macro" do
 
   it "can use macro inside array literal" do
     run(<<-CRYSTAL).to_i.should eq(42)
-      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude"
 
       macro foo
         42
@@ -1398,7 +1396,7 @@ describe "Code gen: macro" do
 
   it "can use macro inside hash literal" do
     run(<<-CRYSTAL).to_i.should eq(42)
-      require "compiler_spec_prelude/hash"
+      require "compiler_spec_prelude"
 
       macro foo
         42
@@ -1839,7 +1837,7 @@ describe "Code gen: macro" do
 
   it "gets default value of instance variable of generic type" do
     run(<<-CRYSTAL).to_i.should eq(10)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       struct Int32
         def self.foo
@@ -1907,8 +1905,7 @@ describe "Code gen: macro" do
 
   it "expands macro with op assign inside assign (#5568)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/hash"
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       macro expand
         {{ yield }}

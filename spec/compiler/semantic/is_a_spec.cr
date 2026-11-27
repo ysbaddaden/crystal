@@ -70,7 +70,7 @@ describe "Semantic: is_a?" do
 
   it "applies filter inside block" do
     assert_type(<<-CRYSTAL) { union_of(char, int32) }
-      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude"
 
       def foo
         yield
@@ -96,7 +96,7 @@ describe "Semantic: is_a?" do
 
   it "applies negative condition filter if then is no return" do
     assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
-      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude"
 
       def foo
         if 1 == 1
@@ -225,7 +225,7 @@ describe "Semantic: is_a?" do
 
   it "doesn't fail on untyped is_a (#10317)" do
     assert_no_errors(<<-CRYSTAL)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       def foo(&block)
       end

@@ -276,7 +276,7 @@ describe "Code gen: new" do
 
   it "can create Tuple with Tuple.new" do
     run(<<-CRYSTAL).to_i.should eq(0)
-      require "compiler_spec_prelude/tuple"
+      require "compiler_spec_prelude"
 
       Tuple.new.size
       CRYSTAL

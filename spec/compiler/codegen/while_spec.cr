@@ -223,7 +223,7 @@ describe "Codegen: while" do
 
   it "doesn't crash on while true begin break rescue (#7786)" do
     codegen(<<-CRYSTAL)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       while true
         begin

@@ -1,12 +1,3 @@
-require "primitives"
-require "./enumerable"
-require "./indexable"
-require "./lib_c"
-require "./pointer"
-{% unless @top_level.has_method?(:raise) %}
-  require "./exceptions"
-{% end %}
-
 # Minimal storage for literals and the collection operations used by compiler specs.
 class Array(T)
   include Enumerable(T)

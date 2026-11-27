@@ -1,7 +1,5 @@
-require "./lib_c"
-require "./enumerable"
-
 # Stores a single key and value for codegen specs.
+
 class Hash(K, V)
   include Enumerable({K, V})
 

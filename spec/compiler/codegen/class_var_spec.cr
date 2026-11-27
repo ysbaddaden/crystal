@@ -165,8 +165,7 @@ describe "Codegen: class var" do
 
   it "initializes class var with array literal" do
     run(<<-CRYSTAL).to_i.should eq(3)
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude"
 
       class Foo
         @@var = [1, 2, 4]
@@ -303,8 +302,7 @@ describe "Codegen: class var" do
 
   it "initializes class var the moment it reaches it" do
     link_and_run(<<-CRYSTAL).status.success?.should be_true
-      require "compiler_spec_prelude/lib_c"
-      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude"
 
       class State
         @@value = 0
@@ -520,8 +518,7 @@ describe "Codegen: class var" do
 
   it "doesn't crash with pointerof from another module" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/once"
-      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude"
 
       class Foo
         @@x : Int32?
@@ -580,8 +577,7 @@ describe "Codegen: class var" do
 
   it "doesn't error if class var shares name with const (#7865)" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/once"
-      require "compiler_spec_prelude/string"
+      require "compiler_spec_prelude"
 
       class Pattern
         @@A = "asdf"
@@ -624,8 +620,7 @@ describe "Codegen: class var" do
 
   it "runs class var side effects (#8862)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(6)
-      require "compiler_spec_prelude/once"
-      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude"
 
       class Foo
         @@x = 0

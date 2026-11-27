@@ -3,8 +3,7 @@ require "../../spec_helper"
 describe "Code gen: regex literal spec" do
   it "works in a class variable (#10951)" do
     run(<<-CRYSTAL).to_b.should be_true
-      require "compiler_spec_prelude/regex"
-      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude"
 
       class Foo
         @@regex = /whatever/

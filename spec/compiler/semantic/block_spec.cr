@@ -370,7 +370,7 @@ describe "Block inference" do
 
   it "checks block type with virtual type" do
     assert_type(<<-CRYSTAL, inject_primitives: true) { int32 }
-      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude"
 
       class Foo
         def to_s
@@ -392,7 +392,7 @@ describe "Block inference" do
 
   it "maps block of union types to union types" do
     assert_type(<<-CRYSTAL, inject_primitives: true) { array_of(union_of(types["Foo1"].virtual_type, types["Foo2"].virtual_type)) }
-      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude"
 
       class Foo1
       end
@@ -458,7 +458,7 @@ describe "Block inference" do
 
   it "allows yielding multiple types when a union is expected" do
     assert_type(<<-CRYSTAL) { array_of(float64) }
-      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude"
 
       class Foo
         include Enumerable(Int32 | Float64)
@@ -675,7 +675,7 @@ describe "Block inference" do
 
   it "passes #262" do
     assert_type(<<-CRYSTAL) { array_of(bool) }
-      require "compiler_spec_prelude/hash"
+      require "compiler_spec_prelude"
 
       h = {} of String => Int32
       h.map { true }
@@ -831,7 +831,7 @@ describe "Block inference" do
 
   it "types recursive hash assignment" do
     assert_type(<<-CRYSTAL) { array_of int32 }
-      require "compiler_spec_prelude/hash"
+      require "compiler_spec_prelude"
 
       class Hash(K, V)
         def map

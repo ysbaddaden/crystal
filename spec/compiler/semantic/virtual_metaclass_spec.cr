@@ -35,7 +35,7 @@ describe "Semantic: virtual metaclass" do
 
   it "allows allocating virtual type when base class is abstract" do
     assert_type(<<-CRYSTAL, inject_primitives: true) { types["Foo"].virtual_type }
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       abstract class Foo
       end
@@ -53,8 +53,7 @@ describe "Semantic: virtual metaclass" do
 
   it "yields virtual type in block arg if class is abstract" do
     assert_type(<<-CRYSTAL, inject_primitives: true) { array_of(types["Foo"].virtual_type) }
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       abstract class Foo
         def clone

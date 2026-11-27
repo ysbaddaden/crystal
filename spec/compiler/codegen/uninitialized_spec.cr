@@ -73,7 +73,7 @@ describe "Code gen: uninitialized" do
 
   it "works inside while/begin/rescue (bug inside #759)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(3)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       a = 3
       while 1

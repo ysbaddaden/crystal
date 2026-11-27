@@ -185,8 +185,7 @@ describe "Semantic: cast" do
     assert_type(<<-CRYSTAL) { array_of(int32) }
       require "primitives"
       require "object/properties"
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       class Foo
         property! x : Int32

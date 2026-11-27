@@ -1,7 +1,3 @@
-require "./lib_c"
-require "./string"
-require "./pointer"
-require "./enum"
 require "crystal/system/exceptions"
 
 module Crystal::System

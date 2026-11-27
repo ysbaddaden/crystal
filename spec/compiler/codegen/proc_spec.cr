@@ -52,7 +52,7 @@ describe "Code gen: proc" do
 
   it "call proc pointer of instance method that raises" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(1)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       class Foo
         def coco
@@ -176,10 +176,7 @@ describe "Code gen: proc" do
 
   it "allows passing proc type to C automatically" do
     link_and_run(<<-CRYSTAL).status.success?.should be_true
-      require "compiler_spec_prelude/raise"
-      require "compiler_spec_prelude/array"
-      require "compiler_spec_prelude/proc"
-      require "compiler_spec_prelude/int"
+      require "compiler_spec_prelude"
 
       lib LibC
         fun qsort(base : Void*, nel : LibC::SizeT, width : LibC::SizeT, callback : (Void*, Void* -> Int32))
@@ -574,8 +571,7 @@ describe "Code gen: proc" do
 
   it "codegens proc that accepts array of type" do
     run(<<-CRYSTAL).to_i.should eq(2)
-      require "compiler_spec_prelude/proc"
-      require "compiler_spec_prelude/array"
+      require "compiler_spec_prelude"
 
       class Foo
         def foo
@@ -715,7 +711,7 @@ describe "Code gen: proc" do
 
   it "codegens proc to implicit self in constant (#647)" do
     run(<<-CRYSTAL).to_i.should eq(1)
-      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude"
 
       module Foo
         def self.blah
@@ -775,8 +771,7 @@ describe "Code gen: proc" do
 
   it "uses alias of proc with virtual type (#1347)" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/hash"
-      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude"
 
       class Class1
         def foo
@@ -969,7 +964,7 @@ describe "Code gen: proc" do
 
   it "calls function pointer" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(2)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       fun foo(f : Int32 -> Int32) : Int32
         f.call(1)
@@ -1050,8 +1045,7 @@ describe "Code gen: proc" do
 
   it "raises if returning closure from top-level fun (#14691)" do
     link_and_run(<<-CRYSTAL).status.success?.should be_true
-      require "compiler_spec_prelude/raise"
-      require "compiler_spec_prelude/bool"
+      require "compiler_spec_prelude"
 
       @[Raises]
       fun foo(x : Int32) : -> Int32

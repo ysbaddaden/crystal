@@ -27,9 +27,7 @@ describe "Semantic: multi assign" do
 
     it "errors if assigning non-Indexable to splat (#11414)" do
       assert_error <<-CRYSTAL, "right-hand side of one-to-many assignment must be an Indexable, not Foo", inject_primitives: true
-        require "compiler_spec_prelude/exceptions"
-        require "compiler_spec_prelude/range"
-        require "compiler_spec_prelude/tuple"
+        require "compiler_spec_prelude"
 
         class Foo
           def [](index)
@@ -48,9 +46,7 @@ describe "Semantic: multi assign" do
   context "strict_multi_assign" do
     it "errors if assigning tuple to fewer targets" do
       assert_error <<-CRYSTAL, "cannot assign Tuple(Int32, Int32, String) to 2 targets", flags: "strict_multi_assign", inject_primitives: true
-        require "compiler_spec_prelude/exceptions"
-        require "compiler_spec_prelude/range"
-        require "compiler_spec_prelude/tuple"
+        require "compiler_spec_prelude"
 
         x = {1, 2, ""}
         a, b = x
@@ -68,9 +64,7 @@ describe "Semantic: multi assign" do
 
     it "errors if assigning union of tuples to fewer targets" do
       assert_error <<-CRYSTAL, "cannot assign (Tuple(Int32, Int32, Int32) | Tuple(Int32, Int32, Int32, Int32)) to 2 targets", flags: "strict_multi_assign", inject_primitives: true
-        require "compiler_spec_prelude/exceptions"
-        require "compiler_spec_prelude/range"
-        require "compiler_spec_prelude/tuple"
+        require "compiler_spec_prelude"
 
         x = true ? {1, 2, 3} : {4, 5, 6, 7}
         a, b = x
@@ -79,9 +73,7 @@ describe "Semantic: multi assign" do
 
     it "doesn't error if some type in union matches target count" do
       assert_type(<<-CRYSTAL, flags: "strict_multi_assign", inject_primitives: true) { tuple_of [int32, union_of(int32, string)] }
-        require "compiler_spec_prelude/exceptions"
-        require "compiler_spec_prelude/range"
-        require "compiler_spec_prelude/tuple"
+        require "compiler_spec_prelude"
 
         x = true ? {1, "", 3} : {4, 5}
         a, b = x
@@ -91,10 +83,7 @@ describe "Semantic: multi assign" do
 
     it "doesn't error if some type in union has no constant size" do
       assert_type(<<-CRYSTAL, flags: "strict_multi_assign", inject_primitives: true) { tuple_of [int32, union_of(int32, string)] }
-        require "compiler_spec_prelude/exceptions"
-        require "compiler_spec_prelude/range"
-        require "compiler_spec_prelude/tuple"
-        require "compiler_spec_prelude/array"
+        require "compiler_spec_prelude"
 
         x = true ? {1, "", 3} : [4, 5]
         a, b = x
@@ -104,9 +93,7 @@ describe "Semantic: multi assign" do
 
     it "errors if assigning non-Indexable (#11414)" do
       assert_error <<-CRYSTAL, "right-hand side of one-to-many assignment must be an Indexable, not Foo", flags: "strict_multi_assign", inject_primitives: true
-        require "compiler_spec_prelude/exceptions"
-        require "compiler_spec_prelude/range"
-        require "compiler_spec_prelude/tuple"
+        require "compiler_spec_prelude"
 
         class Foo
           def [](index)
@@ -123,9 +110,7 @@ describe "Semantic: multi assign" do
 
     it "errors if assigning non-Indexable to splat (#11414)" do
       assert_error <<-CRYSTAL, "right-hand side of one-to-many assignment must be an Indexable, not Foo", flags: "strict_multi_assign", inject_primitives: true
-        require "compiler_spec_prelude/exceptions"
-        require "compiler_spec_prelude/range"
-        require "compiler_spec_prelude/tuple"
+        require "compiler_spec_prelude"
 
         class Foo
           def [](index)
@@ -143,7 +128,7 @@ describe "Semantic: multi assign" do
 
   it "can pass splat variable at top-level to macros (#11596)" do
     assert_type(<<-CRYSTAL) { tuple_of [int32, int32, int32] }
-      require "compiler_spec_prelude/tuple"
+      require "compiler_spec_prelude"
 
       macro foo(x)
         {{ x }}

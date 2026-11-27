@@ -661,7 +661,7 @@ describe "Code gen: virtual type" do
 
   it "codegens new for virtual class with one type" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       abstract class Foo
       end
@@ -680,7 +680,7 @@ describe "Code gen: virtual type" do
 
   it "codegens new for virtual class with two types" do
     link_and_run(<<-CRYSTAL).status.exit_code.should eq(0)
-      require "compiler_spec_prelude/exceptions"
+      require "compiler_spec_prelude"
 
       abstract class Foo
       end
@@ -706,7 +706,7 @@ describe "Code gen: virtual type" do
 
   it "codegens new for new on virtual abstract class (#3835)" do
     result = link_and_run(<<-CRYSTAL)
-      require "compiler_spec_prelude/raise"
+      require "compiler_spec_prelude"
 
       abstract class Foo
       end
