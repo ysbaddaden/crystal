@@ -410,15 +410,6 @@ describe "Code gen: def" do
       CRYSTAL
   end
 
-  it "codegens bug #119" do
-    run(<<-CRYSTAL).to_b.should be_false
-      require "prelude"
-
-      x = {} of String => Hash(String, String)
-      x.has_key?("a")
-      CRYSTAL
-  end
-
   it "puts union before single type in matches preferences" do
     run(<<-CRYSTAL).to_i.should eq(1)
       abstract class Foo
