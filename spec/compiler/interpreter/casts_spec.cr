@@ -328,7 +328,7 @@ describe Crystal::Repl::Interpreter do
     end
 
     it "puts tuple type inside union of different tuple type (#12243)" do
-      interpret(<<-CRYSTAL, prelude: "prelude").should eq(%("{180}"))
+      interpret(<<-CRYSTAL).should eq(180)
         class A
           def initialize(@x : {Char | Int32}?)
           end
@@ -339,12 +339,12 @@ describe Crystal::Repl::Interpreter do
         end
 
         x = A.new({180}).x
-        x.to_s
+        (x && x[0].as?(Int32)) || -1
       CRYSTAL
     end
 
     it "puts named tuple type inside union of different named tuple type (#12243)" do
-      interpret(<<-CRYSTAL, prelude: "prelude").should eq(%("{v: 180}"))
+      interpret(<<-CRYSTAL).should eq(180)
         class A
           def initialize(@x : {v: Char | Int32}?)
           end
@@ -355,7 +355,7 @@ describe Crystal::Repl::Interpreter do
         end
 
         x = A.new({v: 180}).x
-        x.to_s
+        (x && x[:v].as?(Int32)) || -1
       CRYSTAL
     end
 

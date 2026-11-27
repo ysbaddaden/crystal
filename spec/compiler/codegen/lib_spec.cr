@@ -241,7 +241,11 @@ describe "Code gen: lib" do
 
   it "casts C fun to Crystal proc when accessing instance var (#2515)" do
     codegen(<<-CRYSTAL)
-      require "prelude"
+      class Object
+        def to_s
+          {{ @type.name }}
+        end
+      end
 
       lib LibFoo
         struct Some
@@ -249,7 +253,7 @@ describe "Code gen: lib" do
         end
       end
 
-      LibFoo::Some.new.to_s
+      LibFoo::Some.new.x.to_s
       CRYSTAL
   end
 

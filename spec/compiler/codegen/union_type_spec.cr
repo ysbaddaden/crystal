@@ -135,37 +135,42 @@ describe "Code gen: union type" do
   end
 
   it "assigns union to larger union" do
-    run(<<-CRYSTAL).to_string.should eq("d")
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      require "compiler_spec_prelude/lib_c"
+
       a = 1
       a = 1.1_f32
       b = "c"
       b = 'd'
       a = b
-      a.to_s
+      value = pointerof(a).value
+      LibC.exit(value.is_a?(Char) && value == 'd' ? 0 : 1)
       CRYSTAL
   end
 
   it "assigns union to larger union when source is nilable 1" do
-    value = run(<<-CRYSTAL).to_string
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      require "compiler_spec_prelude/lib_c"
+
       a = 1
       b = nil
-      b = Reference.new
+      reference = Reference.new
+      b = reference
       a = b
-      a.to_s
+      value = pointerof(a).value
+      LibC.exit(value.is_a?(Reference) && value.object_id == reference.object_id ? 0 : 1)
       CRYSTAL
-    value.should contain("Reference")
   end
 
   it "assigns union to larger union when source is nilable 2" do
-    run(<<-CRYSTAL).to_string.should eq("")
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      require "compiler_spec_prelude/lib_c"
+
       a = 1
       b = Reference.new
       b = nil
       a = b
-      a.to_s
+      LibC.exit(pointerof(a).value.is_a?(Nil) ? 0 : 1)
       CRYSTAL
   end
 

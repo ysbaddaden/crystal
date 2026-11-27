@@ -302,22 +302,36 @@ describe "Codegen: class var" do
   end
 
   it "initializes class var the moment it reaches it" do
-    run(<<-CRYSTAL).to_string.should eq("BAR")
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      require "compiler_spec_prelude/lib_c"
+      require "compiler_spec_prelude/once"
 
-      ENV["FOO"] = "BAR"
+      class State
+        @@value = 0
+
+        def self.value=(value : Int32)
+          @@value = value
+        end
+
+        def self.value
+          @@value
+        end
+      end
+
+      State.value = 42
 
       class Foo
-        @@x = ENV["FOO"]
+        @@x : Int32 = State.value
 
         def self.x
           @@x
         end
       end
 
-      w = Foo.x
-      z = Foo.x
-      z
+      State.value = 99
+      first = Foo.x
+      second = Foo.x
+      LibC.exit(first == 42 && second == 42 ? 0 : 1)
       CRYSTAL
   end
 
@@ -565,16 +579,19 @@ describe "Codegen: class var" do
   end
 
   it "doesn't error if class var shares name with const (#7865)" do
-    run(<<-CRYSTAL).to_string.should eq("asdfgh")
-      require "prelude"
+    result = link_and_run(<<-CRYSTAL)
+      require "compiler_spec_prelude/once"
+      require "compiler_spec_prelude/string"
 
       class Pattern
         @@A = "asdf"
-        A = "\#{@@A}gh"
+        A = @@A == "asdf" ? "asdfgh" : "unexpected"
       end
 
-      Pattern::A
+      LibC.puts(Pattern::A)
       CRYSTAL
+    result.status.success?.should be_true
+    result.output.should eq("asdfgh\n")
   end
 
   it "catch infinite loop in class var initializer" do

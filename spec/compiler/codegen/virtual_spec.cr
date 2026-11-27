@@ -182,7 +182,11 @@ describe "Code gen: virtual type" do
 
   it "codegens call to Object#to_s from virtual type" do
     run(<<-CRYSTAL)
-      require "prelude"
+      class Object
+        def to_s
+          {{ @type.name }}
+        end
+      end
 
       class Foo
       end
@@ -197,7 +201,11 @@ describe "Code gen: virtual type" do
 
   it "codegens call to Object#to_s from nilable type" do
     run(<<-CRYSTAL)
-      require "prelude"
+      class Object
+        def to_s
+          {{ @type.name }}
+        end
+      end
 
       class Foo
       end
@@ -254,8 +262,12 @@ describe "Code gen: virtual type" do
   end
 
   it "initializes ivars to nil even if object never instantiated" do
-    run(<<-CRYSTAL)
-      require "prelude"
+    link_and_run(<<-CRYSTAL).status.success?.should be_true
+      class Object
+        def to_s
+          {{ @type.name }}
+        end
+      end
 
       class Ref
       end

@@ -137,8 +137,14 @@ describe "Semantic: NoReturn" do
   end
 
   it "computes NoReturn in a lazy way inside if then (#314) (5)" do
-    assert_error <<-CRYSTAL, "undefined method 'size' for Nil"
-      require "prelude"
+    assert_error <<-CRYSTAL, "undefined method 'coco' for Nil"
+      require "primitives"
+      require "compiler_spec_prelude/nil"
+
+      struct Foo
+        def coco
+        end
+      end
 
       a = 1
       x = nil
@@ -147,10 +153,10 @@ describe "Semantic: NoReturn" do
         if a == 1
           x.not_nil!
         else
-          b = "hello"
+          b = Foo.new
         end
 
-        b.size
+        b.coco
 
         b = nil
 
@@ -263,20 +269,26 @@ describe "Semantic: NoReturn" do
   end
 
   it "computes NoReturn in a lazy way inside if else (#314) (5)" do
-    assert_error <<-CRYSTAL, "undefined method 'size' for Nil"
-      require "prelude"
+    assert_error <<-CRYSTAL, "undefined method 'coco' for Nil"
+      require "primitives"
+      require "compiler_spec_prelude/nil"
+
+      struct Foo
+        def coco
+        end
+      end
 
       a = 1
       x = nil
 
       while a < 10
         if a == 1
-          b = "hello"
+          b = Foo.new
         else
           x.not_nil!
         end
 
-        b.size
+        b.coco
 
         b = nil
 
