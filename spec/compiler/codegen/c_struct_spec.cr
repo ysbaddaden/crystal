@@ -265,21 +265,6 @@ describe "Code gen: struct" do
       CRYSTAL
   end
 
-  it "does to_s" do
-    run(<<-CRYSTAL).to_string.should eq("LibFoo::Point(@x=1, @y=2)")
-      require "prelude"
-
-      lib LibFoo
-        struct Point
-          x, y : Int32
-        end
-      end
-
-      point = LibFoo::Point.new x: 1, y: 2
-      point.to_s
-      CRYSTAL
-  end
-
   it "can access instance var from the outside (#1092)" do
     run(<<-CRYSTAL).to_i.should eq(123)
       lib LibFoo

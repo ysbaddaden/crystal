@@ -69,12 +69,21 @@ describe Class do
   end
 
   it "does to_s" do
+    Class.to_s.should eq("Class")
+    Reference.to_s.should eq("Reference")
     Int32.to_s.should eq("Int32")
+    NamedTuple(a: Int32, "b c": String, "+": Char).to_s.should eq(%(NamedTuple(a: Int32, "b c": String, "+": Char)))
   end
 
   it "does to_s with name redefined (#7292)" do
     ClassWithRedefinedName.name.should eq("OtherName")
     ClassWithRedefinedName.to_s.should eq("ClassWithRedefinedName")
+  end
+
+  it "does to_s for virtual metaclass type" do
+    (A || B1 || C1).to_s.should eq "A"
+    (B1 || A || C1).to_s.should eq "B1"
+    (C1 || B1 || A).to_s.should eq "C1"
   end
 
   describe "comparison operators" do

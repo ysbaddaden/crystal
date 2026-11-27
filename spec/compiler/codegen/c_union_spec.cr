@@ -83,21 +83,6 @@ describe "Code gen: c union" do
       CRYSTAL
   end
 
-  it "does to_s" do
-    run(<<-CRYSTAL).to_string.should eq("LibNVG::Color(@array=0)")
-      require "prelude"
-
-      lib LibNVG
-        union Color
-          array: Int32
-        end
-      end
-
-      color = LibNVG::Color.new
-      color.to_s
-      CRYSTAL
-  end
-
   it "automatically converts numeric type in field assignment" do
     run(<<-CRYSTAL).to_i.should eq(57)
       lib LibFoo

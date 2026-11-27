@@ -334,14 +334,6 @@ describe "Code gen: named tuple" do
       CRYSTAL
   end
 
-  it "does to_s for NamedTuple class" do
-    run(<<-CRYSTAL).to_string.should eq(%(NamedTuple(a: Int32, "b c": String, "+": Char)))
-      require "prelude"
-
-      NamedTuple(a: Int32, "b c": String, "+": Char).to_s
-      CRYSTAL
-  end
-
   it "doesn't error if NamedTuple includes a non-generic module (#10380)" do
     codegen(<<-CRYSTAL)
       module Foo

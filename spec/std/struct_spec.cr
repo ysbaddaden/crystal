@@ -42,10 +42,26 @@ private module StructSpec
   end
 end
 
+private lib LibFoo
+  struct Point
+    x, y : Int32
+  end
+
+  union Color
+    array : Int32
+  end
+end
+
 describe "Struct" do
   it "does to_s" do
     s = StructSpec::TestClass.new(1, "hello")
     s.to_s.should eq(%(StructSpec::TestClass(@x=1, @y="hello")))
+
+    point = LibFoo::Point.new(x: 1, y: 2)
+    point.to_s.should eq("LibFoo::Point(@x=1, @y=2)")
+
+    color = LibFoo::Color.new
+    color.to_s.should eq("LibFoo::Color(@array=0)")
   end
 
   it "does pretty_print" do

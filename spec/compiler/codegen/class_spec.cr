@@ -246,14 +246,6 @@ describe "Code gen: class" do
       CRYSTAL
   end
 
-  it "does to_s for class" do
-    run(<<-CRYSTAL).to_string.should eq("Reference")
-      require "prelude"
-
-      Reference.to_s
-      CRYSTAL
-  end
-
   it "allows fixing an instance variable's type" do
     run(<<-CRYSTAL).to_b.should be_true
       class Foo
@@ -618,45 +610,6 @@ describe "Code gen: class" do
       CRYSTAL
   end
 
-  it "does to_s for virtual metaclass type (1)" do
-    run(<<-CRYSTAL).to_string.should eq("Foo")
-      require "prelude"
-
-      class Foo; end
-      class Bar < Foo; end
-      class Baz < Foo; end
-
-      a = Foo || Bar || Baz
-      a.to_s
-      CRYSTAL
-  end
-
-  it "does to_s for virtual metaclass type (2)" do
-    run(<<-CRYSTAL).to_string.should eq("Bar")
-      require "prelude"
-
-      class Foo; end
-      class Bar < Foo; end
-      class Baz < Foo; end
-
-      a = Bar || Foo || Baz
-      a.to_s
-      CRYSTAL
-  end
-
-  it "does to_s for virtual metaclass type (3)" do
-    run(<<-CRYSTAL).to_string.should eq("Baz")
-      require "prelude"
-
-      class Foo; end
-      class Bar < Foo; end
-      class Baz < Foo; end
-
-      a = Baz || Bar || Foo
-      a.to_s
-      CRYSTAL
-  end
-
   it "does not combine module metaclass types with same name but different file scopes (#15503)" do
     run(<<-CRYSTAL, Int32, filename: "foo.cr").should eq(11)
       module Foo
@@ -950,17 +903,6 @@ describe "Code gen: class" do
 
         @a : Proc(String, Nil) = ->f(String)
       end
-      CRYSTAL
-  end
-
-  it "does to_s on class" do
-    run(<<-CRYSTAL).to_string.should eq("Class")
-      require "prelude"
-
-      class Foo
-      end
-
-      Foo.class.to_s
       CRYSTAL
   end
 
