@@ -1,4 +1,5 @@
 # Implements once initialization for linked specs that run on a single thread.
+# WARNING: no recursion checks.
 fun __crystal_once(flag : Bool*, initializer : Void*)
   return if flag.value
   callback = {initializer, Pointer(Void).new(0)}
